@@ -1,0 +1,15 @@
+# Build Date - ${build.timestamp}
+# Version    - ${project.version}
+
+[Unit]
+Description=JBR WordHelper Service (DEV)
+After=network.target
+
+[Service]
+WorkingDirectory=/usr/bin/jbr/dev/wordhelper
+ExecStart=/usr/bin/jbr/dev/wordhelper/venv/bin/gunicorn -w 2 -b 127.0.0.1:5001 app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

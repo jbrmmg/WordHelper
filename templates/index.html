@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Scanner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    padding: 10px;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 8px;
+    color: #a0d4f5;
+    font-size: 22px;
+  }
+
+  #legend {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  #legend span { display: flex; align-items: center; gap: 4px; }
+
+  .swatch {
+    width: 12px; height: 12px; border-radius: 2px; display: inline-block;
+  }
+  .swatch-white  { background: #ccc; }
+  .swatch-blue   { background: #2196f3; }
+  .swatch-green  { background: #4caf50; }
+  .swatch-orange { background: #ff9800; }
+
+  #controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 7px 18px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  #evaluate-btn { background: #4caf50; color: white; }
+  #reset-btn    { background: #f44336; color: white; }
+
+  .memory-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    background: #2a2a4a;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .memory-group label {
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid #555;
+    color: #ccc;
+  }
+
+  .memory-group input[type="radio"] { display: none; }
+  .memory-group input[type="radio"]:checked + span {
+    background: #4a6fa5;
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  #letters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .letter-card {
+    background: #2a2a4a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 4px 3px;
+    text-align: center;
+    width: 76px;
+    transition: opacity 0.15s;
+  }
+
+  .letter-card.disabled { opacity: 0.35; }
+
+  .letter-label {
+    font-size: 20px;
+    font-weight: bold;
+    color: #a0d4f5;
+    display: block;
+    line-height: 1.1;
+  }
+
+  .cb-row {
+    display: flex;
+    justify-content: space-around;
+    margin: 2px 0 1px;
+  }
+
+  .cb-row input { cursor: pointer; width: 14px; height: 14px; }
+
+  .pos-nums {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    font-size: 8px;
+    color: #555;
+    margin-top: 1px;
+  }
+
+  .pos-nums span { text-align: center; }
+
+  .pos-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    margin-top: 1px;
+  }
+
+  .pos-row input { width: 100%; cursor: pointer; height: 13px; }
+
+  #results {
+    background: #2a2a4a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 60px;
+  }
+
+  #results-info {
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #888;
+    font-family: monospace;
+  }
+
+  #word-list {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .word-count {
+    margin-top: 6px;
+    font-weight: bold;
+    color: #4caf50;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Word Scanner</h1>
+
+<div id="legend">
+  <span><span class="swatch swatch-white"></span> Active (uncheck = not in word)</span>
+  <span><span class="swatch swatch-blue"></span> Known in word</span>
+  <span><span class="swatch swatch-green"></span> Correct position</span>
+  <span><span class="swatch swatch-orange"></span> Wrong position</span>
+</div>
+
+<div id="controls">
+  <button id="evaluate-btn" onclick="evaluate()">Evaluate</button>
+  <button id="reset-btn" onclick="resetAll()">Reset</button>
+  <div class="memory-group">
+    Memory:
+    <label><input type="radio" name="memory" value="0" checked onchange="memoryChange(0)"><span>1</span></label>
+    <label><input type="radio" name="memory" value="1" onchange="memoryChange(1)"><span>2</span></label>
+    <label><input type="radio" name="memory" value="2" onchange="memoryChange(2)"><span>3</span></label>
+    <label><input type="radio" name="memory" value="3" onchange="memoryChange(3)"><span>4</span></label>
+  </div>
+</div>
+
+<div id="letters-container">
+  {% for L in letter_order %}
+  <div class="letter-card" id="card-{{ L }}">
+    <span class="letter-label">{{ L }}</span>
+    <div class="cb-row">
+      <input type="checkbox" checked title="Letter can be in word"
+             onchange="onEnabledChange('{{ L }}', this)">
+      <input type="checkbox" style="accent-color:#2196f3;" title="Letter is in the word"
+             onchange="onInWordChange('{{ L }}', this)">
+    </div>
+    <div class="pos-nums">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+    </div>
+    <div class="pos-row" id="inc-{{ L }}">
+      {% for pos in range(5) %}
+      <input type="checkbox" style="accent-color:#4caf50;" title="{{ L }} IS at position {{ pos+1 }}"
+             onchange="onPosChange('{{ L }}', 'includePos', {{ pos }}, this)">
+      {% endfor %}
+    </div>
+    <div class="pos-row" id="exc-{{ L }}">
+      {% for pos in range(5) %}
+      <input type="checkbox" style="accent-color:#ff9800;" title="{{ L }} is NOT at position {{ pos+1 }}"
+             onchange="onPosChange('{{ L }}', 'excludePos', {{ pos }}, this)">
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="results">
+  <div id="results-info"></div>
+  <div id="word-list"><span style="color:#888;">Adjust letters above to filter words.</span></div>
+</div>
+
+<script>
+const MEMORIES = 4;
+const letterOrder = {{ letter_order | tojson }};
+let currentMemory = 0;
+
+// State: letterState[L] = { inWord, memories: [ { enabled, includePos[5], excludePos[5] } x4 ] }
+const letterState = {};
+for (const L of letterOrder) {
+  letterState[L] = {
+    inWord: false,
+    memories: Array.from({length: MEMORIES}, () => ({
+      enabled: true,
+      includePos: [false, false, false, false, false],
+      excludePos: [false, false, false, false, false],
+    })),
+  };
+}
+
+function getCurrent(L) {
+  return letterState[L].memories[currentMemory];
+}
+
+function onEnabledChange(L, cb) {
+  const state = getCurrent(L);
+  state.enabled = cb.checked;
+
+  const card = document.getElementById('card-' + L);
+  const inWordCb = card.querySelector('.cb-row input:nth-child(2)');
+
+  if (!cb.checked) {
+    letterState[L].inWord = false;
+    inWordCb.checked = false;
+    inWordCb.disabled = true;
+    state.includePos.fill(false);
+    state.excludePos.fill(false);
+    card.querySelectorAll('.pos-row input').forEach(el => { el.checked = false; el.disabled = true; });
+  } else {
+    inWordCb.disabled = false;
+    card.querySelectorAll('.pos-row input').forEach(el => { el.disabled = false; });
+  }
+
+  card.classList.toggle('disabled', !cb.checked);
+  evaluate();
+}
+
+function onInWordChange(L, cb) {
+  letterState[L].inWord = cb.checked;
+  evaluate();
+}
+
+function onPosChange(L, posType, pos, cb) {
+  getCurrent(L)[posType][pos] = cb.checked;
+  evaluate();
+}
+
+function memoryChange(newMemory) {
+  if (newMemory === currentMemory) return;
+  currentMemory = newMemory;
+  syncUIToState();
+  evaluate();
+}
+
+function syncUIToState() {
+  for (const L of letterOrder) {
+    const state = getCurrent(L);
+    const ls = letterState[L];
+    const card = document.getElementById('card-' + L);
+
+    const cbs = card.querySelectorAll('.cb-row input');
+    cbs[0].checked = state.enabled;
+    cbs[1].checked = ls.inWord;
+    cbs[1].disabled = !state.enabled;
+
+    const incInputs = document.getElementById('inc-' + L).querySelectorAll('input');
+    const excInputs = document.getElementById('exc-' + L).querySelectorAll('input');
+    for (let i = 0; i < 5; i++) {
+      incInputs[i].checked = state.includePos[i];
+      incInputs[i].disabled = !state.enabled;
+      excInputs[i].checked = state.excludePos[i];
+      excInputs[i].disabled = !state.enabled;
+    }
+
+    card.classList.toggle('disabled', !state.enabled);
+  }
+}
+
+function resetAll() {
+  for (const L of letterOrder) {
+    letterState[L].inWord = false;
+    letterState[L].memories = Array.from({length: MEMORIES}, () => ({
+      enabled: true,
+      includePos: [false, false, false, false, false],
+      excludePos: [false, false, false, false, false],
+    }));
+  }
+  document.querySelectorAll('input[name="memory"]')[0].checked = true;
+  currentMemory = 0;
+  syncUIToState();
+  evaluate();
+}
+
+function buildPayload() {
+  const letters = {};
+  for (const L of letterOrder) {
+    const state = getCurrent(L);
+    letters[L] = {
+      enabled: state.enabled,
+      inWord: letterState[L].inWord,
+      includePos: state.includePos.slice(),
+      excludePos: state.excludePos.slice(),
+    };
+  }
+  return { letters };
+}
+
+async function evaluate() {
+  const resp = await fetch('/evaluate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildPayload()),
+  });
+  const data = await resp.json();
+
+  document.getElementById('results-info').innerHTML =
+    `<span style="color:#f44336;">Excluded: ${data.excluded || '(none)'}</span>&nbsp;&nbsp;` +
+    `<span style="color:#2196f3;">In word: ${data.mustInclude || '(none)'}</span>&nbsp;&nbsp;` +
+    `<span style="color:#4caf50;">Pattern: ${data.pattern}</span>`;
+
+  const wordDiv = document.getElementById('word-list');
+  wordDiv.innerHTML = '';
+
+  if (data.count === 0) {
+    wordDiv.innerHTML = '<span style="color:#888;">No matching words found.</span>';
+    return;
+  }
+
+  const COLS = 10;
+  for (let i = 0; i < data.words.length; i += COLS) {
+    const line = document.createElement('div');
+    line.textContent = data.words.slice(i, i + COLS).join('  ');
+    wordDiv.appendChild(line);
+  }
+
+  const countEl = document.createElement('div');
+  countEl.className = 'word-count';
+  countEl.textContent = `${data.count} word${data.count !== 1 ? 's' : ''}`;
+  wordDiv.appendChild(countEl);
+}
+</script>
+</body>
+</html>
