@@ -24,11 +24,7 @@ echo Deploy Directory     : ${DeployDir}
 echo Installing service file
 sudo mv ./artifactExtract/${ServiceName}.service /lib/systemd/system/${ServiceName}.service
 
-# Verify prerequisites (python3-venv and deploy directory must be set up on the server in advance)
-if ! python3 -c "import ensurepip" > /dev/null 2>&1; then
-    echo "ERROR: python3-venv is not installed. Run: sudo apt-get install python3-venv"
-    exit 1
-fi
+# Verify deploy directory exists (one-time server setup required)
 if [ ! -d "${DeployDir}" ]; then
     echo "ERROR: Deploy directory ${DeployDir} does not exist."
     echo "Run once on the server: sudo mkdir -p ${DeployDir} && sudo chown \$(whoami) ${DeployDir}"
