@@ -5,7 +5,7 @@
 
     <groupId>com.jbr.wordhelper</groupId>
     <artifactId>WordHelper</artifactId>
-    <version>26.3.5</version>
+    <version>26.3.5-SNAPSHOT</version>
 
     <name>WordHelper</name>
     <packaging>pom</packaging>
@@ -20,7 +20,7 @@
         <connection>scm:git:git@github.com:jbrmmg/WordHelper.git</connection>
         <developerConnection>scm:git:git@github.com:jbrmmg/WordHelper.git</developerConnection>
         <url>https://github.com/jbrmmg/WordHelper</url>
-        <tag>v26.3.5</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <build>
