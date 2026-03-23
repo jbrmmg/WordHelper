@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # Build Date:    ${build.timestamp}
 # Build Version: ${project.version}
 #
@@ -37,7 +38,8 @@ cp -r ./artifactExtract/deploy/* ${DeployDir}/
 
 # Set up Python virtual environment
 echo Setting up Python virtual environment
-python3 -m venv ${DeployDir}/venv
+rm -rf ${DeployDir}/venv
+/usr/bin/python3 -m venv ${DeployDir}/venv
 ${DeployDir}/venv/bin/pip install --quiet --upgrade pip
 ${DeployDir}/venv/bin/pip install --quiet -r ${DeployDir}/requirements.txt
 
