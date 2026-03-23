@@ -38,6 +38,8 @@ cp -r ./artifactExtract/deploy/* ${DeployDir}/
 
 # Set up Python virtual environment
 echo Setting up Python virtual environment
+echo Python binary: $(ls -la /usr/bin/python3)
+echo Python version: $(/usr/bin/python3 --version)
 rm -rf ${DeployDir}/venv
 /usr/bin/python3 -m venv ${DeployDir}/venv
 ${DeployDir}/venv/bin/pip install --quiet --upgrade pip
