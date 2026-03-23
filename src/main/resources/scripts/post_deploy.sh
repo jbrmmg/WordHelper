@@ -24,10 +24,18 @@ echo Deploy Directory     : ${DeployDir}
 echo Installing service file
 sudo mv ./artifactExtract/${ServiceName}.service /lib/systemd/system/${ServiceName}.service
 
+# Ensure python3-venv is available
+echo Checking python3-venv
+if ! python3 -m venv --help > /dev/null 2>&1; then
+    echo Installing python3-venv
+    sudo apt-get install -y python3-venv
+fi
+
 # Create deployment directory and copy app files
 echo Copying application files
 sudo mkdir -p ${DeployDir}
-sudo chown $(whoami):$(whoami) ${DeployDir}
+sudo chmod 775 ${DeployDir}
+sudo chgrp $(id -gn) ${DeployDir}
 cp -r ./artifactExtract/deploy/* ${DeployDir}/
 
 # Set up Python virtual environment
