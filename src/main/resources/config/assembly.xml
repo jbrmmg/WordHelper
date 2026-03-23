@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<assembly>
+    <id>wordhelper</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <!-- Python application source files -->
+    <fileSets>
+        <fileSet>
+            <directory>${basedir}</directory>
+            <outputDirectory>deploy</outputDirectory>
+            <includes>
+                <include>app.py</include>
+                <include>requirements.txt</include>
+                <include>words.txt</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/templates</directory>
+            <outputDirectory>deploy/templates</outputDirectory>
+            <includes>
+                <include>*.html</include>
+            </includes>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </fileSet>
+    </fileSets>
+
+    <files>
+        <!-- Systemd service files -->
+        <file>
+            <source>${basedir}/src/main/resources/service/wordhelper.service</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>wordhelper.service</destName>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </file>
+        <file>
+            <source>${basedir}/src/main/resources/service/wordhelper-dev.service</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>wordhelper-dev.service</destName>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </file>
+
+        <!-- Deploy scripts -->
+        <file>
+            <source>${basedir}/src/main/resources/scripts/pre_deploy.sh</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>pre_deploy.sh</destName>
+            <fileMode>0775</fileMode>
+            <filtered>true</filtered>
+        </file>
+        <file>
+            <source>${basedir}/src/main/resources/scripts/post_deploy.sh</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>post_deploy.sh</destName>
+            <fileMode>0775</fileMode>
+            <filtered>true</filtered>
+        </file>
+
+        <!-- Deployment directory descriptors (Jenkins reads these to know where to copy files) -->
+        <file>
+            <source>${basedir}/src/main/resources/deployment/release.txt</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>maven-releases-DeploymentDir.txt</destName>
+            <fileMode>0664</fileMode>
+        </file>
+        <file>
+            <source>${basedir}/src/main/resources/deployment/development.txt</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>maven-snapshots-DeploymentDir.txt</destName>
+            <fileMode>0664</fileMode>
+        </file>
+    </files>
+</assembly>
