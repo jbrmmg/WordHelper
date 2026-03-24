@@ -195,6 +195,8 @@
     <label><input type="radio" name="memory" value="1" onchange="memoryChange(1)"><span>2</span></label>
     <label><input type="radio" name="memory" value="2" onchange="memoryChange(2)"><span>3</span></label>
     <label><input type="radio" name="memory" value="3" onchange="memoryChange(3)"><span>4</span></label>
+    <label><input type="radio" name="memory" value="4" onchange="memoryChange(4)"><span>5</span></label>
+    <label><input type="radio" name="memory" value="5" onchange="memoryChange(5)"><span>6</span></label>
   </div>
 </div>
 
@@ -233,7 +235,7 @@
 </div>
 
 <script>
-const MEMORIES = 4;
+const MEMORIES = 6;
 const letterOrder = {{ letter_order | tojson }};
 let currentMemory = 0;
 
