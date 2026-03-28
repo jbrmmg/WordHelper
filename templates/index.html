@@ -239,13 +239,13 @@ const MEMORIES = 6;
 const letterOrder = {{ letter_order | tojson }};
 let currentMemory = 0;
 
-// State: letterState[L] = { inWord, memories: [ { enabled, includePos[5], excludePos[5] } x4 ] }
+// State: letterState[L] = { memories: [ { enabled, inWord, includePos[5], excludePos[5] } x6 ] }
 const letterState = {};
 for (const L of letterOrder) {
   letterState[L] = {
-    inWord: false,
     memories: Array.from({length: MEMORIES}, () => ({
       enabled: true,
+      inWord: false,
       includePos: [false, false, false, false, false],
       excludePos: [false, false, false, false, false],
     })),
@@ -264,7 +264,7 @@ function onEnabledChange(L, cb) {
   const inWordCb = card.querySelector('.cb-row input:nth-child(2)');
 
   if (!cb.checked) {
-    letterState[L].inWord = false;
+    state.inWord = false;
     inWordCb.checked = false;
     inWordCb.disabled = true;
     state.includePos.fill(false);
@@ -280,7 +280,7 @@ function onEnabledChange(L, cb) {
 }
 
 function onInWordChange(L, cb) {
-  letterState[L].inWord = cb.checked;
+  getCurrent(L).inWord = cb.checked;
   evaluate();
 }
 
@@ -299,12 +299,11 @@ function memoryChange(newMemory) {
 function syncUIToState() {
   for (const L of letterOrder) {
     const state = getCurrent(L);
-    const ls = letterState[L];
     const card = document.getElementById('card-' + L);
 
     const cbs = card.querySelectorAll('.cb-row input');
     cbs[0].checked = state.enabled;
-    cbs[1].checked = ls.inWord;
+    cbs[1].checked = state.inWord;
     cbs[1].disabled = !state.enabled;
 
     const incInputs = document.getElementById('inc-' + L).querySelectorAll('input');
@@ -322,9 +321,9 @@ function syncUIToState() {
 
 function resetAll() {
   for (const L of letterOrder) {
-    letterState[L].inWord = false;
     letterState[L].memories = Array.from({length: MEMORIES}, () => ({
       enabled: true,
+      inWord: false,
       includePos: [false, false, false, false, false],
       excludePos: [false, false, false, false, false],
     }));
@@ -341,13 +340,25 @@ function buildPayload() {
     const state = getCurrent(L);
     letters[L] = {
       enabled: state.enabled,
-      inWord: letterState[L].inWord,
+      inWord: state.inWord,
       includePos: state.includePos.slice(),
       excludePos: state.excludePos.slice(),
     };
   }
   return { letters };
 }
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const L = e.key.toUpperCase();
+  if (letterOrder.includes(L)) {
+    const card = document.getElementById('card-' + L);
+    const enabledCb = card.querySelector('.cb-row input:first-child');
+    enabledCb.checked = !enabledCb.checked;
+    onEnabledChange(L, enabledCb);
+  }
+});
 
 async function evaluate() {
   const resp = await fetch('/evaluate', {
