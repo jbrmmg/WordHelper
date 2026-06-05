@@ -51,7 +51,7 @@ def check_word(word, excluded, pattern, must_include, exclude_patterns):
 
 @app.route('/')
 def index():
-    return render_template('index.html', letter_order=letter_order)
+    return render_template('index.html', letter_order=letter_order, words=words)
 
 
 @app.route('/evaluate', methods=['POST'])
