@@ -110,6 +110,7 @@
   }
 
   .letter-card.disabled { opacity: 0.35; }
+  .letter-card.not-in-words { opacity: 0.5; }
 
   .letter-label {
     font-size: 20px;
@@ -126,6 +127,31 @@
     min-height: 13px;
     line-height: 1.3;
   }
+
+  .letter-cross-count {
+    display: block;
+    font-size: 10px;
+    color: #c8a000;
+    min-height: 13px;
+    line-height: 1.3;
+  }
+
+  .mem-strip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    margin-top: 3px;
+    margin-bottom: 1px;
+  }
+
+  .mem-dot {
+    height: 4px;
+    border-radius: 1px;
+    background: #222;
+  }
+
+  .mem-dot.filtered { background: #555; }
+  .mem-dot.available { background: #4caf50; }
 
   .cb-row {
     display: flex;
@@ -216,6 +242,12 @@
   <div class="letter-card" id="card-{{ L }}">
     <span class="letter-label">{{ L }}</span>
     <span class="letter-count" id="count-{{ L }}"></span>
+    <span class="letter-cross-count" id="cross-count-{{ L }}"></span>
+    <div class="mem-strip">
+      {% for i in range(6) %}
+      <span class="mem-dot" id="mem-{{ L }}-{{ i }}"></span>
+      {% endfor %}
+    </div>
     <div class="cb-row">
       <input type="checkbox" checked title="Letter can be in word"
              onchange="onEnabledChange('{{ L }}', this)">
@@ -249,6 +281,7 @@
 <script>
 const MEMORIES = 6;
 const letterOrder = {{ letter_order | tojson }};
+const allWords = {{ words | tojson }};
 let currentMemory = 0;
 
 // State: letterState[L] = { memories: [ { enabled, inWord, includePos[5], excludePos[5] } x6 ] }
@@ -385,6 +418,72 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+function jsCheckWord(word, excluded, pattern, mustInclude, excludePatterns) {
+  for (const ch of excluded) if (word.includes(ch)) return false;
+  for (let i = 0; i < 5; i++) if (pattern[i] !== '_' && pattern[i] !== word[i]) return false;
+  for (const ch of mustInclude) if (!word.includes(ch)) return false;
+  for (const ep of excludePatterns)
+    for (let i = 0; i < 5; i++) if (ep[i] !== '_' && ep[i] === word[i]) return false;
+  return true;
+}
+
+function memoryHasFilter(m) {
+  return letterOrder.some(L => {
+    const s = letterState[L].memories[m];
+    return !s.enabled || s.inWord || s.includePos.some(Boolean) || s.excludePos.some(Boolean);
+  });
+}
+
+function getMatchingWordsForMemory(m) {
+  const unused = [], mustInclude = [], pattern = ['_','_','_','_','_'], excludePatterns = [];
+  for (const L of letterOrder) {
+    const s = letterState[L].memories[m];
+    if (!s.enabled) { unused.push(L); continue; }
+    if (s.inWord || s.excludePos.some(Boolean)) mustInclude.push(L);
+    for (let i = 0; i < 5; i++) if (s.includePos[i]) pattern[i] = L;
+    if (s.excludePos.some(Boolean)) excludePatterns.push(s.excludePos.map((p, i) => p ? L : '_'));
+  }
+  return allWords.filter(w => jsCheckWord(w, unused, pattern, mustInclude, excludePatterns));
+}
+
+function updateCrossMemoryCounts() {
+  // Pre-compute matching words for all memories
+  const memWords = Array.from({length: MEMORIES}, (_, m) =>
+    memoryHasFilter(m) ? getMatchingWordsForMemory(m) : null
+  );
+
+  // Cross-memory counts (exclude unfiltered and solved)
+  const crossCounts = {};
+  for (const L of letterOrder) crossCounts[L] = 0;
+  for (let m = 0; m < MEMORIES; m++) {
+    const mw = memWords[m];
+    if (!mw || mw.length <= 1) continue;
+    for (const word of mw) {
+      for (const L of new Set(word)) {
+        if (crossCounts[L] !== undefined) crossCounts[L]++;
+      }
+    }
+  }
+
+  for (const L of letterOrder) {
+    document.getElementById('cross-count-' + L).textContent = crossCounts[L] > 0 ? crossCounts[L] : '';
+
+    // Update memory strip dots
+    for (let m = 0; m < MEMORIES; m++) {
+      const dot = document.getElementById(`mem-${L}-${m}`);
+      const mw = memWords[m];
+      dot.classList.remove('filtered', 'available');
+      if (mw === null) {
+        // unfiltered — stays dark
+      } else if (mw.some(w => w.includes(L))) {
+        dot.classList.add('available');
+      } else {
+        dot.classList.add('filtered');
+      }
+    }
+  }
+}
+
 async function evaluate() {
   const resp = await fetch('/evaluate', {
     method: 'POST',
@@ -403,7 +502,10 @@ async function evaluate() {
 
   if (data.count === 0) {
     wordDiv.innerHTML = '<span style="color:#888;">No matching words found.</span>';
-    for (const L of letterOrder) document.getElementById('count-' + L).textContent = '';
+    for (const L of letterOrder) {
+      document.getElementById('count-' + L).textContent = '';
+      document.getElementById('card-' + L).classList.remove('not-in-words');
+    }
     return;
   }
 
@@ -431,21 +533,15 @@ async function evaluate() {
     document.getElementById('count-' + L).textContent = letterCounts[L] > 0 ? letterCounts[L] : '';
   }
 
-  // Auto-disable letters that don't appear in any remaining word
+  updateCrossMemoryCounts();
+
+  // Dim letters that don't appear in any remaining word (no state change)
   const lettersInWords = new Set(data.words.join('').split(''));
   for (const L of letterOrder) {
+    const card = document.getElementById('card-' + L);
     const state = getCurrent(L);
-    if (!state.enabled) continue;
-    if (state.inWord || state.includePos.some(Boolean) || state.excludePos.some(Boolean)) continue;
-    if (!lettersInWords.has(L)) {
-      state.enabled = false;
-      const card = document.getElementById('card-' + L);
-      const cbs = card.querySelectorAll('.cb-row input');
-      cbs[0].checked = false;
-      cbs[1].disabled = true;
-      card.querySelectorAll('.pos-row input').forEach(el => { el.disabled = true; });
-      card.classList.add('disabled');
-    }
+    const absent = state.enabled && !lettersInWords.has(L);
+    card.classList.toggle('not-in-words', absent);
   }
 }
 </script>
