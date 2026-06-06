@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_SOURCE = "/usr/share/dict/british-english-huge"
-DEFAULT_DB = "words.db"
+DEFAULT_DB = "/var/lib/wordhelper/words.db"
 DEFAULT_TAG = "wbritish"
 
 SCHEMA = """

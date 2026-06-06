@@ -2,6 +2,10 @@
 
 SQLite database of English words for puzzle solving, imported from the `wbritish-huge` system dictionary.
 
+## Location
+
+The database is stored at `/var/lib/wordhelper/words.db`, owned by root and globally readable. Write access (for imports) requires `sudo`.
+
 ## Source
 
 The `wbritish-huge` package provides a large British English word list at `/usr/share/dict/british-english-huge`.
@@ -19,16 +23,16 @@ sudo apt install wbritish-huge
 | Argument | Default | Description |
 |---|---|---|
 | `--source` | `/usr/share/dict/british-english-huge` | Path to the word list file |
-| `--db` | `words.db` | Path to the SQLite database |
+| `--db` | `/var/lib/wordhelper/words.db` | Path to the SQLite database |
 | `--source-tag` | `wbritish` | Value written to the `source` column |
 | `--lowercase` | off | Force all words to lowercase before inserting |
 
 ```bash
 # Initial import from system dictionary (source = 'wbritish')
-python import_words.py --db ~/words.db
+sudo python import_words.py
 
 # Import an additional word list as lowercase (source = 'wordlist')
-python import_words.py --source words.txt --source-tag wordlist --lowercase --db ~/words.db
+sudo python import_words.py --source words.txt --source-tag wordlist --lowercase
 ```
 
 Words are inserted in batches of 5,000 with progress reported to stdout. Duplicate words are silently skipped (`INSERT OR IGNORE`), so re-running the script against an existing database is safe. If the `source` column is absent (databases created before it was added), the script adds it automatically and sets existing rows to `wbritish`.
