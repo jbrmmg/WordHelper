@@ -13,11 +13,11 @@ echo Deployment Directory : $3
 
 if [ "$1" = "maven-releases" ]; then
     ServiceName="wordhelper"
-    ServiceName="wordclue"
+    ServiceName2="wordclue"
     DeployDir="/usr/bin/jbr/wordhelper"
 else
     ServiceName="wordhelper-dev"
-    ServiceName="wordclue-dev"
+    ServiceName2="wordclue-dev"
     DeployDir="/usr/bin/jbr/dev/wordhelper"
 fi
 echo Service Name         : ${ServiceName}
