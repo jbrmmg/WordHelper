@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Clue Finder</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  padding: 12px;
+}
+
+h1 {
+  text-align: center;
+  color: #a0d4f5;
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.panel {
+  background: #2a2a4a;
+  border: 1px solid #3a3a6a;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6a8aaa;
+  margin-bottom: 10px;
+}
+
+/* ── Memory buttons ─────────────────────────────────────── */
+
+#memory-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.mem-btn {
+  flex: 1;
+  padding: 10px 8px 8px;
+  border-radius: 8px;
+  border: 2px solid #3a3a6a;
+  background: #1e1e3a;
+  color: #556;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  position: relative;
+  user-select: none;
+}
+
+.mem-btn:hover:not(.active) { border-color: #6a8aaa; color: #99b; }
+
+.mem-btn.active {
+  background: #1a2e4a;
+  border-color: #a0d4f5;
+  color: #a0d4f5;
+}
+
+.mem-btn-num {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.mem-btn-len {
+  font-size: 10px;
+  margin-top: 3px;
+  color: #556;
+  min-height: 13px;
+}
+
+.mem-btn.active .mem-btn-len { color: #6a8aaa; }
+
+.mem-btn-dot {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4caf50;
+  display: none;
+}
+
+.mem-btn.has-data .mem-btn-dot { display: block; }
+
+#clear-memory-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #633;
+  background: #2a1a1a;
+  color: #c66;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  align-self: center;
+}
+
+#clear-memory-btn:hover { background: #3a1a1a; border-color: #f44336; color: #f44336; }
+
+/* ── Length selector ────────────────────────────────────── */
+
+#length-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.len-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #3a3a6a;
+  background: #1e1e3a;
+  color: #778;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.len-btn:hover { border-color: #6a8aaa; color: #aac; }
+
+.len-btn.active {
+  background: #a0d4f5;
+  border-color: #a0d4f5;
+  color: #1a1a2e;
+}
+
+/* ── Tiles ──────────────────────────────────────────────── */
+
+#tiles-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.tile {
+  width: 52px;
+  height: 58px;
+  background: #1e1e3a;
+  border: 2px solid #3a3a6a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  position: relative;
+  user-select: none;
+}
+
+.tile-num {
+  font-size: 9px;
+  color: #445;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.tile-letter {
+  font-size: 24px;
+  font-weight: bold;
+  color: #cde;
+  line-height: 1;
+}
+
+.tile:hover:not(.selected) { border-color: #6a8aaa; }
+
+.tile.selected {
+  border-color: #a0d4f5 !important;
+  box-shadow: 0 0 14px rgba(160, 212, 245, 0.5);
+  background: #1e2e4a;
+}
+
+.tile.has-letter .tile-letter { color: #a0d4f5; }
+.tile.has-letter { background: #1a2e4a; }
+
+.tile-group-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: none;
+}
+
+.tile-group-dot.visible { display: block; }
+
+/* ── Middle row ─────────────────────────────────────────── */
+
+#middle-row {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 10px;
+  max-width: 880px;
+  margin: 0 auto 10px;
+}
+
+#middle-row .panel { margin: 0; max-width: none; }
+
+/* ── Letter chips ───────────────────────────────────────── */
+
+.letters-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #668;
+  margin-bottom: 8px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+#letters-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+}
+
+.letter-chip {
+  aspect-ratio: 1;
+  border-radius: 7px;
+  border: 2px solid transparent;
+  background: #1e1e3a;
+  color: #668;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+
+.letter-chip:hover { border-color: #556; color: #aac; }
+
+.letter-chip.must {
+  background: #163a22;
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.letter-chip.excluded {
+  background: #3a1616;
+  border-color: #f44336;
+  color: #f44336;
+  text-decoration: line-through;
+}
+
+.letter-chip.assign-ready {
+  border-color: #a0d4f5 !important;
+  color: #a0d4f5 !important;
+  background: #1a2a4a !important;
+}
+
+#letters-mode-hint {
+  font-size: 11px;
+  color: #a0d4f5;
+  margin-bottom: 6px;
+  min-height: 15px;
+  font-style: italic;
+}
+
+/* ── Groups panel ───────────────────────────────────────── */
+
+.groups-hint {
+  font-size: 11px;
+  color: #556;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+#group-btns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.group-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(0,0,0,0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: rgba(255,255,255,0.8);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.group-btn:hover { transform: scale(1.1); }
+
+.group-btn.active {
+  border-color: white;
+  box-shadow: 0 0 12px rgba(255,255,255,0.35);
+  transform: scale(1.15);
+}
+
+#clear-groups-btn {
+  width: 100%;
+  padding: 7px;
+  background: #2a1a1a;
+  border: 1px solid #633;
+  border-radius: 6px;
+  color: #c66;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#clear-groups-btn:hover { background: #3a1a1a; border-color: #f44336; color: #f44336; }
+
+/* ── Results ────────────────────────────────────────────── */
+
+#results-count {
+  font-size: 13px;
+  color: #668;
+  margin-bottom: 8px;
+  min-height: 18px;
+}
+
+#results-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.word-chip {
+  background: #1e1e3a;
+  border: 1px solid #3a3a6a;
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #b8d8f8;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 620px) {
+  #middle-row { grid-template-columns: 1fr; }
+  #letters-grid { grid-template-columns: repeat(7, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<h1>Word Clue Finder</h1>
+
+<!-- Memory -->
+<div class="panel">
+  <div class="panel-title">Memory</div>
+  <div style="display:flex; gap:8px; align-items:stretch;">
+    <div id="memory-buttons" style="flex:1; display:flex; gap:8px;"></div>
+    <button id="clear-memory-btn">Clear This</button>
+  </div>
+</div>
+
+<!-- Length -->
+<div class="panel">
+  <div class="panel-title">Word Length</div>
+  <div id="length-buttons"></div>
+</div>
+
+<!-- Positions -->
+<div class="panel">
+  <div class="panel-title" id="tiles-title">Positions — click a tile, then type or click a letter below</div>
+  <div id="tiles-wrap"></div>
+</div>
+
+<!-- Letters + Groups -->
+<div id="middle-row">
+
+  <div class="panel">
+    <div class="panel-title">Letters</div>
+    <div id="letters-mode-hint"></div>
+    <div class="letters-legend">
+      <span><span class="legend-swatch" style="background:#4caf50"></span>Must contain</span>
+      <span><span class="legend-swatch" style="background:#f44336"></span>Not in word</span>
+    </div>
+    <div id="letters-grid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Link Positions</div>
+    <div class="groups-hint">Click a colour to activate it, then click position tiles to link them. Linked positions must share the same letter.</div>
+    <div id="group-btns"></div>
+    <button id="clear-groups-btn">Clear All Groups</button>
+  </div>
+
+</div>
+
+<!-- Results -->
+<div class="panel">
+  <div class="panel-title">Results</div>
+  <div id="results-count">Enter clues above to find matching words.</div>
+  <div id="results-words"></div>
+</div>
+
+<script>
+const GROUP_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+const LETTERS      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const NUM_MEMORIES = 5;
+
+// Per-memory state (persisted when switching)
+const memories = Array.from({length: NUM_MEMORIES}, () => ({
+  length: 5,
+  tiles:  {},   // pos (int) -> letter (uppercase)
+  status: {},   // letter -> 'must' | 'excluded'
+  groups: {},   // pos (int) -> groupId (1-5)
+}));
+
+let currentMemory = 0;
+
+// UI-only state (reset on memory switch)
+let selTile  = null;
+let selGroup = null;
+
+// Shorthand for the active memory's data
+function mem() { return memories[currentMemory]; }
+
+function hasMemoryData(idx) {
+  const m = memories[idx];
+  return Object.keys(m.tiles).length > 0  ||
+         Object.keys(m.status).length > 0 ||
+         Object.keys(m.groups).length > 0;
+}
+
+// ── Memory buttons ────────────────────────────────────────
+
+function buildMemoryButtons() {
+  const c = document.getElementById('memory-buttons');
+  c.innerHTML = '';
+  for (let i = 0; i < NUM_MEMORIES; i++) {
+    const m = memories[i];
+    const btn = document.createElement('div');
+    const active = i === currentMemory;
+    btn.className = 'mem-btn' + (active ? ' active' : '') + (hasMemoryData(i) ? ' has-data' : '');
+    btn.innerHTML =
+      `<div class="mem-btn-dot"></div>` +
+      `<div class="mem-btn-num">${i + 1}</div>` +
+      `<div class="mem-btn-len">${hasMemoryData(i) ? m.length + ' letters' : ''}</div>`;
+    btn.addEventListener('click', () => switchMemory(i));
+    c.appendChild(btn);
+  }
+}
+
+function switchMemory(idx) {
+  if (idx === currentMemory) return;
+  currentMemory = idx;
+  selTile  = null;
+  selGroup = null;
+  buildMemoryButtons();
+  buildLengthButtons();
+  buildTiles();
+  refreshLetterGrid();
+  buildGroupButtons();
+  search();
+}
+
+document.getElementById('clear-memory-btn').addEventListener('click', () => {
+  memories[currentMemory] = { length: 5, tiles: {}, status: {}, groups: {} };
+  selTile  = null;
+  selGroup = null;
+  buildMemoryButtons();
+  buildLengthButtons();
+  buildTiles();
+  refreshLetterGrid();
+  buildGroupButtons();
+  search();
+});
+
+// ── Length buttons ────────────────────────────────────────
+
+function buildLengthButtons() {
+  const c = document.getElementById('length-buttons');
+  c.innerHTML = '';
+  for (let n = 3; n <= 20; n++) {
+    const b = document.createElement('div');
+    b.className = 'len-btn' + (n === mem().length ? ' active' : '');
+    b.textContent = n;
+    b.addEventListener('click', () => setLength(n));
+    c.appendChild(b);
+  }
+}
+
+function setLength(n) {
+  mem().length = n;
+  for (const p of Object.keys(mem().tiles).map(Number))  if (p >= n) delete mem().tiles[p];
+  for (const p of Object.keys(mem().groups).map(Number)) if (p >= n) delete mem().groups[p];
+  if (selTile !== null && selTile >= n) selTile = null;
+  buildMemoryButtons();
+  buildLengthButtons();
+  buildTiles();
+  search();
+}
+
+// ── Tiles ─────────────────────────────────────────────────
+
+function buildTiles() {
+  const c = document.getElementById('tiles-wrap');
+  c.innerHTML = '';
+  for (let i = 0; i < mem().length; i++) {
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.id = 'tile-' + i;
+    tile.innerHTML =
+      `<div class="tile-num">${i + 1}</div>` +
+      `<div class="tile-letter" id="tletter-${i}"></div>` +
+      `<div class="tile-group-dot" id="tdot-${i}"></div>`;
+    tile.addEventListener('click', () => onTileClick(i));
+    c.appendChild(tile);
+  }
+  refreshTiles();
+}
+
+function refreshTiles() {
+  for (let i = 0; i < mem().length; i++) {
+    const tile     = document.getElementById('tile-' + i);
+    const letterEl = document.getElementById('tletter-' + i);
+    const dot      = document.getElementById('tdot-' + i);
+    if (!tile) continue;
+
+    const letter = mem().tiles[i] || '';
+    letterEl.textContent = letter;
+    tile.classList.toggle('selected',   selTile === i);
+    tile.classList.toggle('has-letter', !!letter);
+
+    const g = mem().groups[i];
+    if (g) {
+      tile.style.borderColor = GROUP_COLORS[g - 1];
+      dot.style.background   = GROUP_COLORS[g - 1];
+      dot.classList.add('visible');
+    } else {
+      tile.style.borderColor = '';
+      dot.style.background   = '';
+      dot.classList.remove('visible');
+    }
+  }
+
+  const hint  = document.getElementById('letters-mode-hint');
+  const title = document.getElementById('tiles-title');
+  if (selTile !== null) {
+    title.textContent = `Positions — position ${selTile + 1} selected`;
+    hint.textContent  = '↓ click a letter to assign it to the selected position, or type it';
+  } else {
+    title.textContent = 'Positions — click a tile, then type or click a letter below';
+    hint.textContent  = '';
+  }
+  refreshLetterGrid();
+}
+
+function onTileClick(i) {
+  if (selGroup !== null) {
+    if (mem().groups[i] === selGroup) {
+      delete mem().groups[i];
+    } else {
+      mem().groups[i] = selGroup;
+    }
+    refreshTiles();
+    search();
+    return;
+  }
+  selTile = (selTile === i) ? null : i;
+  refreshTiles();
+}
+
+// ── Letter chips ──────────────────────────────────────────
+
+function buildLetterGrid() {
+  const c = document.getElementById('letters-grid');
+  c.innerHTML = '';
+  for (const L of LETTERS) {
+    const chip = document.createElement('div');
+    chip.className = 'letter-chip';
+    chip.id = 'chip-' + L;
+    chip.textContent = L;
+    chip.addEventListener('click', () => onLetterClick(L));
+    c.appendChild(chip);
+  }
+  refreshLetterGrid();
+}
+
+function refreshLetterGrid() {
+  const assignMode = selTile !== null;
+  for (const L of LETTERS) {
+    const chip = document.getElementById('chip-' + L);
+    if (!chip) continue;
+    chip.className = assignMode
+      ? 'letter-chip assign-ready'
+      : 'letter-chip ' + (mem().status[L] || '');
+  }
+}
+
+function onLetterClick(L) {
+  if (selTile !== null) {
+    if (mem().tiles[selTile] === L) {
+      delete mem().tiles[selTile];
+    } else {
+      mem().tiles[selTile] = L;
+    }
+    selTile = findNextEmpty(selTile + 1);
+    buildMemoryButtons();
+    refreshTiles();
+    search();
+    return;
+  }
+  const cur = mem().status[L];
+  if (!cur)              mem().status[L] = 'must';
+  else if (cur === 'must') mem().status[L] = 'excluded';
+  else                   delete mem().status[L];
+  buildMemoryButtons();
+  refreshLetterGrid();
+  search();
+}
+
+function findNextEmpty(fromPos) {
+  for (let i = fromPos; i < mem().length; i++) {
+    if (!mem().tiles[i]) return i;
+  }
+  return null;
+}
+
+// ── Group buttons ─────────────────────────────────────────
+
+function buildGroupButtons() {
+  const c = document.getElementById('group-btns');
+  c.innerHTML = '';
+  GROUP_COLORS.forEach((color, idx) => {
+    const g = idx + 1;
+    const btn = document.createElement('div');
+    btn.className = 'group-btn' + (selGroup === g ? ' active' : '');
+    btn.style.background = color;
+    btn.textContent = g;
+    btn.addEventListener('click', () => {
+      selGroup = (selGroup === g) ? null : g;
+      selTile  = null;
+      buildGroupButtons();
+      refreshTiles();
+    });
+    c.appendChild(btn);
+  });
+}
+
+document.getElementById('clear-groups-btn').addEventListener('click', () => {
+  mem().groups = {};
+  selGroup = null;
+  buildMemoryButtons();
+  buildGroupButtons();
+  refreshTiles();
+  search();
+});
+
+// ── Keyboard ──────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (selTile === null) return;
+
+  const key = e.key.toUpperCase();
+
+  if (e.key === 'Escape') {
+    selTile = null;
+    refreshTiles();
+  } else if (e.key === 'Backspace' || e.key === 'Delete') {
+    delete mem().tiles[selTile];
+    buildMemoryButtons();
+    refreshTiles();
+    search();
+  } else if (/^[A-Z]$/.test(key)) {
+    mem().tiles[selTile] = key;
+    selTile = findNextEmpty(selTile + 1);
+    buildMemoryButtons();
+    refreshTiles();
+    search();
+  } else if (e.key === 'ArrowRight') {
+    selTile = Math.min(selTile + 1, mem().length - 1);
+    refreshTiles();
+  } else if (e.key === 'ArrowLeft') {
+    selTile = Math.max(selTile - 1, 0);
+    refreshTiles();
+  }
+});
+
+// ── Search ────────────────────────────────────────────────
+
+let searchTimer = null;
+
+function search() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 180);
+}
+
+async function doSearch() {
+  const groupMap = {};
+  for (const [pos, gid] of Object.entries(mem().groups)) {
+    if (!groupMap[gid]) groupMap[gid] = [];
+    groupMap[gid].push(parseInt(pos));
+  }
+  const groups   = Object.values(groupMap).filter(g => g.length > 1);
+  const excluded = Object.entries(mem().status).filter(([,v]) => v === 'excluded').map(([k]) => k);
+  const mustHave = Object.entries(mem().status).filter(([,v]) => v === 'must').map(([k]) => k);
+
+  const resp = await fetch('/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      length:  mem().length,
+      pattern: mem().tiles,
+      excluded,
+      mustHave,
+      groups,
+    }),
+  });
+  const data = await resp.json();
+  renderResults(data);
+}
+
+function renderResults(data) {
+  const countEl = document.getElementById('results-count');
+  const wordsEl = document.getElementById('results-words');
+  wordsEl.innerHTML = '';
+
+  if (data.count === 0) {
+    countEl.style.color = '#f44336';
+    countEl.textContent = 'No matching words found.';
+    return;
+  }
+
+  countEl.style.color = '#4caf50';
+  countEl.textContent = `${data.count.toLocaleString()} word${data.count !== 1 ? 's' : ''} found` +
+    (data.count > 200 ? ' — showing first 200' : '');
+
+  for (const word of data.words.slice(0, 200)) {
+    const chip = document.createElement('div');
+    chip.className = 'word-chip';
+    chip.textContent = word;
+    wordsEl.appendChild(chip);
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────
+
+buildMemoryButtons();
+buildLengthButtons();
+buildTiles();
+buildLetterGrid();
+buildGroupButtons();
+search();
+
+</script>
+</body>
+</html>

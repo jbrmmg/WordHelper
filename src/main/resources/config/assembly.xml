@@ -13,6 +13,7 @@
             <outputDirectory>deploy</outputDirectory>
             <includes>
                 <include>app.py</include>
+                <include>wordclue.py</include>
                 <include>requirements.txt</include>
                 <include>words.txt</include>
             </includes>
@@ -50,6 +51,21 @@
             <source>${basedir}/src/main/resources/service/wordhelper-dev.service</source>
             <outputDirectory>/</outputDirectory>
             <destName>wordhelper-dev.service</destName>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </file>
+
+        <file>
+            <source>${basedir}/src/main/resources/service/wordclue.service</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>wordclue.service</destName>
+            <fileMode>0644</fileMode>
+            <filtered>true</filtered>
+        </file>
+        <file>
+            <source>${basedir}/src/main/resources/service/wordclue-dev.service</source>
+            <outputDirectory>/</outputDirectory>
+            <destName>wordclue-dev.service</destName>
             <fileMode>0644</fileMode>
             <filtered>true</filtered>
         </file>

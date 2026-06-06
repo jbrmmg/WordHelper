@@ -1,0 +1,15 @@
+# Build Date - ${build.timestamp}
+# Version    - ${project.version}
+
+[Unit]
+Description=JBR WordClue Service
+After=network.target
+
+[Service]
+WorkingDirectory=/usr/bin/jbr/wordhelper
+ExecStart=/usr/bin/jbr/wordhelper/venv/bin/gunicorn -w 2 -b 0.0.0.0:5001 wordclue:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
