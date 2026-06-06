@@ -45,7 +45,13 @@ def search():
             continue
 
         for group in groups:
-            if len(set(w[p] for p in group)) > 1:
+            group_set = set(group)
+            letters_in_group = set(w[p] for p in group)
+            if len(letters_in_group) > 1:
+                ok = False
+                break
+            group_letter = next(iter(letters_in_group))
+            if any(c == group_letter for i, c in enumerate(w) if i not in group_set):
                 ok = False
                 break
         if not ok:
