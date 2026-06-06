@@ -13,12 +13,15 @@ echo Deployment Directory : $3
 
 if [ "$1" = "maven-releases" ]; then
     ServiceName="wordhelper"
+    ServiceName="wordclue"
     DeployDir="/usr/bin/jbr/wordhelper"
 else
     ServiceName="wordhelper-dev"
+    ServiceName="wordclue-dev"
     DeployDir="/usr/bin/jbr/dev/wordhelper"
 fi
 echo Service Name         : ${ServiceName}
+echo Service Name 2       : ${ServiceName2}
 echo Deploy Directory     : ${DeployDir}
 
 # Install systemd service file
@@ -41,6 +44,9 @@ ${DeployDir}/venv/bin/pip install --quiet -r ${DeployDir}/requirements.txt
 
 # Enable and start service
 echo Enabling and starting ${ServiceName}
+echo Enabling and starting ${ServiceName2}
 sudo systemctl daemon-reload
 sudo systemctl enable ${ServiceName}
+sudo systemctl enable ${ServiceName2}
 sudo systemctl start ${ServiceName}
+sudo systemctl start ${ServiceName2}
