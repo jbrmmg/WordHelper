@@ -7,7 +7,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/usr/bin/jbr/wordhelper
-ExecStart=/usr/bin/jbr/wordhelper/venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 app:app
+ExecStart=/usr/bin/jbr/wordhelper/venv/bin/gunicorn -w 2 -b 0.0.0.0:5000 app:app
 Restart=on-failure
 RestartSec=5
 
