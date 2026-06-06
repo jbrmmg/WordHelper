@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS words (
     unique_letter_count INTEGER,
     has_repeated        INTEGER NOT NULL DEFAULT 0,
     letter_set          TEXT,
-    source              TEXT    NOT NULL DEFAULT 'wbritish'
+    source              TEXT    NOT NULL DEFAULT 'wbritish',
+    is_ascii            INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_words_word       ON words(word);
@@ -56,53 +57,51 @@ CREATE        INDEX IF NOT EXISTS idx_words_pos5       ON words(pos5);
 CREATE        INDEX IF NOT EXISTS idx_words_letter_set ON words(letter_set);
 CREATE        INDEX IF NOT EXISTS idx_words_flags      ON words(is_proper, has_special);
 CREATE        INDEX IF NOT EXISTS idx_words_source     ON words(source);
-
-CREATE TABLE IF NOT EXISTS letter_stats (
-    letter      TEXT    PRIMARY KEY,
-    total_count INTEGER NOT NULL DEFAULT 0,
-    pos1_count  INTEGER NOT NULL DEFAULT 0,
-    pos2_count  INTEGER NOT NULL DEFAULT 0,
-    pos3_count  INTEGER NOT NULL DEFAULT 0,
-    pos4_count  INTEGER NOT NULL DEFAULT 0,
-    pos5_count  INTEGER NOT NULL DEFAULT 0
-);
+CREATE        INDEX IF NOT EXISTS idx_words_is_ascii   ON words(is_ascii);
 """
 
 WORD_INSERT = """
 INSERT OR IGNORE INTO words
     (word, length, is_proper, has_special,
      pos1, pos2, pos3, pos4, pos5,
-     unique_letter_count, has_repeated, letter_set, source)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-"""
-
-STAT_UPSERT = """
-INSERT INTO letter_stats (letter, total_count, pos1_count, pos2_count, pos3_count, pos4_count, pos5_count)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(letter) DO UPDATE SET
-    total_count = total_count + excluded.total_count,
-    pos1_count  = pos1_count  + excluded.pos1_count,
-    pos2_count  = pos2_count  + excluded.pos2_count,
-    pos3_count  = pos3_count  + excluded.pos3_count,
-    pos4_count  = pos4_count  + excluded.pos4_count,
-    pos5_count  = pos5_count  + excluded.pos5_count
+     unique_letter_count, has_repeated, letter_set, source, is_ascii)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 BATCH_SIZE = 5000
 
 
 def migrate_schema(con: sqlite3.Connection):
-    """Add source column to existing databases that predate it."""
+    """Apply any pending column additions to an existing database."""
     tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if "words" not in tables:
         return  # new DB — executescript will create it correctly
+
     cols = {row[1] for row in con.execute("PRAGMA table_info(words)")}
+
     if "source" not in cols:
-        print("Migrating: adding 'source' column to existing words table...")
+        print("Migrating: adding 'source' column...")
         con.execute("ALTER TABLE words ADD COLUMN source TEXT NOT NULL DEFAULT 'wbritish'")
         con.execute("CREATE INDEX IF NOT EXISTS idx_words_source ON words(source)")
         con.commit()
-        print("Migration complete.")
+        print("  Done.")
+
+    if "is_ascii" not in cols:
+        print("Migrating: adding 'is_ascii' column...")
+        con.execute("ALTER TABLE words ADD COLUMN is_ascii INTEGER NOT NULL DEFAULT 0")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_words_is_ascii ON words(is_ascii)")
+        print("  Populating is_ascii for existing rows...")
+        rows = con.execute("SELECT id, word FROM words").fetchall()
+        updates = [(1 if word.isascii() else 0, row_id) for row_id, word in rows]
+        con.executemany("UPDATE words SET is_ascii = ? WHERE id = ?", updates)
+        con.commit()
+        print(f"  Updated {len(updates):,} rows. Done.")
+
+    if "letter_stats" in tables:
+        print("Migrating: dropping letter_stats table...")
+        con.execute("DROP TABLE letter_stats")
+        con.commit()
+        print("  Done.")
 
 
 def analyse(word: str, lowercase: bool, source_tag: str):
@@ -111,6 +110,7 @@ def analyse(word: str, lowercase: bool, source_tag: str):
         word = word.lower()
 
     is_proper = 1 if word[0].isupper() else 0
+    is_ascii = 1 if word.isascii() else 0
     alpha_only = all(c.isalpha() for c in word)
     has_special = 0 if alpha_only else 1
 
@@ -133,15 +133,7 @@ def analyse(word: str, lowercase: bool, source_tag: str):
 
     return (word, length, is_proper, has_special,
             pos1, pos2, pos3, pos4, pos5,
-            unique_count, has_repeated, letter_set, source_tag)
-
-
-def build_stat_deltas(word: str):
-    """Yield per-letter stat increments for a 5-letter pure-alpha word (lowercased)."""
-    for i, ch in enumerate(word):
-        counts = [0, 0, 0, 0, 0]
-        counts[i] = 1
-        yield (ch, 1, counts[0], counts[1], counts[2], counts[3], counts[4])
+            unique_count, has_repeated, letter_set, source_tag, is_ascii)
 
 
 def import_words(source: Path, db_path: Path, source_tag: str, lowercase: bool):
@@ -156,7 +148,6 @@ def import_words(source: Path, db_path: Path, source_tag: str, lowercase: bool):
     con.executescript(SCHEMA)
 
     word_batch = []
-    stat_deltas: dict[str, list[int]] = {}
     inserted = skipped = 0
 
     with source.open(encoding="utf-8", errors="replace") as fh:
@@ -165,18 +156,7 @@ def import_words(source: Path, db_path: Path, source_tag: str, lowercase: bool):
             if not word:
                 continue
 
-            row = analyse(word, lowercase, source_tag)
-            word_batch.append(row)
-
-            # Accumulate letter stats for 5-letter pure-alpha words
-            if row[3] == 0 and row[1] == 5:  # has_special==0, length==5
-                lower5 = row[0].lower()
-                for ch, tot, p1, p2, p3, p4, p5 in build_stat_deltas(lower5):
-                    if ch not in stat_deltas:
-                        stat_deltas[ch] = [0, 0, 0, 0, 0, 0]
-                    d = stat_deltas[ch]
-                    d[0] += tot
-                    d[1] += p1; d[2] += p2; d[3] += p3; d[4] += p4; d[5] += p5
+            word_batch.append(analyse(word, lowercase, source_tag))
 
             if len(word_batch) >= BATCH_SIZE:
                 cur = con.executemany(WORD_INSERT, word_batch)
@@ -192,9 +172,6 @@ def import_words(source: Path, db_path: Path, source_tag: str, lowercase: bool):
         skipped += len(word_batch) - cur.rowcount
         con.commit()
 
-    stat_rows = [(ch, *vals) for ch, vals in sorted(stat_deltas.items())]
-    con.executemany(STAT_UPSERT, stat_rows)
-    con.commit()
     con.close()
 
     print(f"\nDone. {inserted:,} words inserted, {skipped:,} duplicates skipped.")

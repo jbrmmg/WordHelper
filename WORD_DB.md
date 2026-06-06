@@ -35,7 +35,7 @@ sudo python import_words.py
 sudo python import_words.py --source words.txt --source-tag wordlist --lowercase
 ```
 
-Words are inserted in batches of 5,000 with progress reported to stdout. Duplicate words are silently skipped (`INSERT OR IGNORE`), so re-running the script against an existing database is safe. If the `source` column is absent (databases created before it was added), the script adds it automatically and sets existing rows to `wbritish`.
+Words are inserted in batches of 5,000 with progress reported to stdout. Duplicate words are silently skipped (`INSERT OR IGNORE`), so re-running the script against an existing database is safe. The script applies any pending schema migrations automatically on each run (adding missing columns, dropping obsolete tables).
 
 ## Schema
 
@@ -55,16 +55,7 @@ One row per word from the source file.
 | `has_repeated` | INTEGER | 1 if the word contains any repeated letter |
 | `letter_set` | TEXT | Sorted unique letters, e.g. `abck` for `aback`; populated for pure-alpha words |
 | `source` | TEXT | Origin of the word: `wbritish` (from `wbritish-huge`) or `wordlist` (from `words.txt`) |
-
-### `letter_stats`
-
-Precomputed letter frequency counts across all 5-letter pure-alpha words.
-
-| Column | Type | Description |
-|---|---|---|
-| `letter` | TEXT PK | Lowercase letter a–z |
-| `total_count` | INTEGER | Total occurrences across all 5-letter words |
-| `pos1_count`–`pos5_count` | INTEGER | Occurrences at each position |
+| `is_ascii` | INTEGER | 1 if the word contains only ASCII characters (A–Z, no accented letters) |
 
 ### Indexes
 
@@ -76,16 +67,18 @@ Precomputed letter frequency counts across all 5-letter pure-alpha words.
 | `idx_words_letter_set` | `letter_set` | Anagram / must-include queries |
 | `idx_words_flags` | `is_proper, has_special` | Filter to puzzle-suitable words |
 | `idx_words_source` | `source` | Filter by word origin |
+| `idx_words_is_ascii` | `is_ascii` | Filter to ASCII-only words |
 
 ## Example Queries
 
-Filter to Wordle-suitable words (5-letter, lowercase, no special characters):
+Filter to Wordle-suitable words (5-letter, lowercase, ASCII only):
 
 ```sql
 SELECT word FROM words
 WHERE length = 5
   AND is_proper = 0
-  AND has_special = 0;
+  AND has_special = 0
+  AND is_ascii = 1;
 ```
 
 Words matching a Wordle pattern — `_A_E_` (A in position 2, E in position 4):
@@ -114,8 +107,3 @@ Words from the original `words.txt` word list only:
 SELECT word FROM words WHERE source = 'wordlist';
 ```
 
-Top letters by frequency in position 1:
-
-```sql
-SELECT letter, pos1_count FROM letter_stats ORDER BY pos1_count DESC LIMIT 10;
-```

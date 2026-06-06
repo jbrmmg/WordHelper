@@ -1,24 +1,30 @@
+import sqlite3
+
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
 WORD_LENGTH = 5
+DB_PATH = "/var/lib/wordhelper/words.db"
 
 
 def load_words():
-    words = []
-    freq = {chr(65 + i): 0 for i in range(26)}
+    con = sqlite3.connect(DB_PATH)
 
-    with open('words.txt') as f:
-        for line in f:
-            word = line.strip().upper()
-            if len(word) == WORD_LENGTH:
-                words.append(word)
-                for ch in word:
-                    if 'A' <= ch <= 'Z':
-                        freq[ch] += 1
+    rows = con.execute(
+        "SELECT word FROM words WHERE length = ? AND is_proper = 0 AND has_special = 0 AND is_ascii = 1",
+        (WORD_LENGTH,)
+    ).fetchall()
+    words = [row[0].upper() for row in rows]
 
-    letter_order = sorted(freq.keys(), key=lambda x: -freq[x])
+    con.close()
+
+    freq = {}
+    for word in words:
+        for ch in word:
+            freq[ch] = freq.get(ch, 0) + 1
+    letter_order = sorted(freq, key=lambda c: -freq[c])
+
     return words, letter_order
 
 
