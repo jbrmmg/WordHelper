@@ -4,6 +4,9 @@ from flask import Flask, jsonify, render_template, request
 app = Flask(__name__)
 DB_PATH = "/var/lib/wordhelper/words.db"
 
+COMMON_LETTERS   = set('etaoinshrdlcu')
+UNCOMMON_LETTERS = set('mwfgypbvkjxqz')
+
 
 @app.route('/')
 def index():
@@ -12,12 +15,16 @@ def index():
 
 @app.route('/search', methods=['POST'])
 def search():
-    data      = request.json
-    length    = int(data.get('length', 5))
-    pattern   = data.get('pattern', {})      # {"0": "a", "2": "t"}
-    excluded  = [c.lower() for c in data.get('excluded', [])]
-    must_have = [c.lower() for c in data.get('mustHave', [])]
-    groups    = data.get('groups', [])        # [[0, 3], [1, 4], ...]
+    data          = request.json
+    length        = int(data.get('length', 5))
+    pattern       = data.get('pattern', {})      # {"0": "a", "2": "t"}
+    excluded      = [c.lower() for c in data.get('excluded', [])]
+    must_have     = [c.lower() for c in data.get('mustHave', [])]
+    common_req    = [c.lower() for c in data.get('commonLetters', [])]
+    uncommon_req  = [c.lower() for c in data.get('uncommonLetters', [])]
+    pos_common    = [int(p) for p in data.get('posCommon', [])]
+    pos_uncommon  = [int(p) for p in data.get('posUncommon', [])]
+    groups        = data.get('groups', [])        # [[0, 3], [1, 4], ...]
 
     con = sqlite3.connect(DB_PATH)
     rows = con.execute(
@@ -39,6 +46,34 @@ def search():
         ok = True
         for pos_str, letter in pattern.items():
             if w[int(pos_str)] != letter.lower():
+                ok = False
+                break
+        if not ok:
+            continue
+
+        for ltr in common_req:
+            if ltr not in w or ltr not in COMMON_LETTERS:
+                ok = False
+                break
+        if not ok:
+            continue
+
+        for ltr in uncommon_req:
+            if ltr not in w or ltr not in UNCOMMON_LETTERS:
+                ok = False
+                break
+        if not ok:
+            continue
+
+        for pos in pos_common:
+            if pos < len(w) and w[pos] not in COMMON_LETTERS:
+                ok = False
+                break
+        if not ok:
+            continue
+
+        for pos in pos_uncommon:
+            if pos < len(w) and w[pos] not in UNCOMMON_LETTERS:
                 ok = False
                 break
         if not ok:

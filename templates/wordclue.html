@@ -210,6 +210,61 @@ h1 {
 
 .tile-group-dot.visible { display: block; }
 
+.tile-freq-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-freq-badge.visible        { display: flex; }
+.tile-freq-badge.common         { background: #f39c12; color: #1a1a2e; }
+.tile-freq-badge.uncommon       { background: #9b59b6; color: #fff; }
+
+#freq-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.freq-mode-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 2px solid;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.freq-mode-btn.common-btn   { background: #3a2800; border-color: #5a4000; color: #f39c12; }
+.freq-mode-btn.uncommon-btn { background: #2a1a3a; border-color: #4a2a6a; color: #9b59b6; }
+.freq-mode-btn:hover        { filter: brightness(1.2); }
+.freq-mode-btn.active       { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.25); }
+
+#clear-freq-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #633;
+  background: #2a1a1a;
+  color: #c66;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#clear-freq-btn:hover { background: #3a1a1a; border-color: #f44336; color: #f44336; }
+
 /* ── Middle row ─────────────────────────────────────────── */
 
 #middle-row {
@@ -242,8 +297,22 @@ h1 {
 }
 
 #letters-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.freq-label {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+.letter-row {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(13, 1fr);
   gap: 5px;
 }
 
@@ -276,6 +345,18 @@ h1 {
   border-color: #f44336;
   color: #f44336;
   text-decoration: line-through;
+}
+
+.letter-chip.common {
+  background: #3a2800;
+  border-color: #f39c12;
+  color: #f39c12;
+}
+
+.letter-chip.uncommon {
+  background: #2a1a3a;
+  border-color: #9b59b6;
+  color: #9b59b6;
 }
 
 .letter-chip.assign-ready {
@@ -376,7 +457,7 @@ h1 {
 
 @media (max-width: 620px) {
   #middle-row { grid-template-columns: 1fr; }
-  #letters-grid { grid-template-columns: repeat(7, 1fr); }
+  .letter-row { grid-template-columns: repeat(7, 1fr); }
 }
 </style>
 </head>
@@ -403,6 +484,12 @@ h1 {
 <div class="panel">
   <div class="panel-title" id="tiles-title">Positions — click a tile, then type or click a letter below</div>
   <div id="tiles-wrap"></div>
+  <div id="freq-mode-row">
+    <span class="panel-title" style="margin:0;">Position frequency:</span>
+    <div id="freq-btn-common"   class="freq-mode-btn common-btn">C &nbsp;Common</div>
+    <div id="freq-btn-uncommon" class="freq-mode-btn uncommon-btn">U &nbsp;Uncommon</div>
+    <button id="clear-freq-btn">Clear</button>
+  </div>
 </div>
 
 <!-- Letters + Groups -->
@@ -414,6 +501,8 @@ h1 {
     <div class="letters-legend">
       <span><span class="legend-swatch" style="background:#4caf50"></span>Must contain</span>
       <span><span class="legend-swatch" style="background:#f44336"></span>Not in word</span>
+      <span><span class="legend-swatch" style="background:#f39c12"></span>Common</span>
+      <span><span class="legend-swatch" style="background:#9b59b6"></span>Uncommon</span>
     </div>
     <div id="letters-grid"></div>
   </div>
@@ -435,16 +524,19 @@ h1 {
 </div>
 
 <script>
-const GROUP_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
-const LETTERS      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const GROUP_COLORS     = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+const COMMON_LETTERS   = 'ETAOINSHRDLCU'.split('');
+const UNCOMMON_LETTERS = 'MWFGYPBVKJXQZ'.split('');
+const LETTERS          = [...COMMON_LETTERS, ...UNCOMMON_LETTERS];
 const NUM_MEMORIES = 5;
 
 // Per-memory state (persisted when switching)
 const memories = Array.from({length: NUM_MEMORIES}, () => ({
   length: 5,
   tiles:  {},   // pos (int) -> letter (uppercase)
-  status: {},   // letter -> 'must' | 'excluded'
+  status: {},   // letter -> 'must' | 'excluded' | 'common' | 'uncommon'
   groups: {},   // pos (int) -> groupId (1-5)
+  freq:   {},   // pos (int) -> 'common' | 'uncommon'
 }));
 
 let currentMemory = 0;
@@ -452,6 +544,7 @@ let currentMemory = 0;
 // UI-only state (reset on memory switch)
 let selTile  = null;
 let selGroup = null;
+let freqMode = null;  // 'common' | 'uncommon' | null
 
 // Shorthand for the active memory's data
 function mem() { return memories[currentMemory]; }
@@ -460,7 +553,8 @@ function hasMemoryData(idx) {
   const m = memories[idx];
   return Object.keys(m.tiles).length > 0  ||
          Object.keys(m.status).length > 0 ||
-         Object.keys(m.groups).length > 0;
+         Object.keys(m.groups).length > 0 ||
+         Object.keys(m.freq).length > 0;
 }
 
 // ── Memory buttons ────────────────────────────────────────
@@ -487,23 +581,27 @@ function switchMemory(idx) {
   currentMemory = idx;
   selTile  = null;
   selGroup = null;
+  freqMode = null;
   buildMemoryButtons();
   buildLengthButtons();
   buildTiles();
   refreshLetterGrid();
   buildGroupButtons();
+  buildFreqModeButtons();
   search();
 }
 
 document.getElementById('clear-memory-btn').addEventListener('click', () => {
-  memories[currentMemory] = { length: 5, tiles: {}, status: {}, groups: {} };
+  memories[currentMemory] = { length: 5, tiles: {}, status: {}, groups: {}, freq: {} };
   selTile  = null;
   selGroup = null;
+  freqMode = null;
   buildMemoryButtons();
   buildLengthButtons();
   buildTiles();
   refreshLetterGrid();
   buildGroupButtons();
+  buildFreqModeButtons();
   search();
 });
 
@@ -525,6 +623,7 @@ function setLength(n) {
   mem().length = n;
   for (const p of Object.keys(mem().tiles).map(Number))  if (p >= n) delete mem().tiles[p];
   for (const p of Object.keys(mem().groups).map(Number)) if (p >= n) delete mem().groups[p];
+  for (const p of Object.keys(mem().freq).map(Number))   if (p >= n) delete mem().freq[p];
   if (selTile !== null && selTile >= n) selTile = null;
   buildMemoryButtons();
   buildLengthButtons();
@@ -544,6 +643,7 @@ function buildTiles() {
     tile.innerHTML =
       `<div class="tile-num">${i + 1}</div>` +
       `<div class="tile-letter" id="tletter-${i}"></div>` +
+      `<div class="tile-freq-badge" id="tbadge-${i}"></div>` +
       `<div class="tile-group-dot" id="tdot-${i}"></div>`;
     tile.addEventListener('click', () => onTileClick(i));
     c.appendChild(tile);
@@ -555,6 +655,7 @@ function refreshTiles() {
   for (let i = 0; i < mem().length; i++) {
     const tile     = document.getElementById('tile-' + i);
     const letterEl = document.getElementById('tletter-' + i);
+    const badge    = document.getElementById('tbadge-' + i);
     const dot      = document.getElementById('tdot-' + i);
     if (!tile) continue;
 
@@ -573,6 +674,17 @@ function refreshTiles() {
       dot.style.background   = '';
       dot.classList.remove('visible');
     }
+
+    const f = mem().freq[i];
+    if (badge) {
+      if (f) {
+        badge.className   = 'tile-freq-badge visible ' + f;
+        badge.textContent = f === 'common' ? 'C' : 'U';
+      } else {
+        badge.className   = 'tile-freq-badge';
+        badge.textContent = '';
+      }
+    }
   }
 
   const hint  = document.getElementById('letters-mode-hint');
@@ -580,6 +692,9 @@ function refreshTiles() {
   if (selTile !== null) {
     title.textContent = `Positions — position ${selTile + 1} selected`;
     hint.textContent  = '↓ click a letter to assign it to the selected position, or type it';
+  } else if (freqMode !== null) {
+    title.textContent = `Positions — click tiles to mark as ${freqMode} letter`;
+    hint.textContent  = '';
   } else {
     title.textContent = 'Positions — click a tile, then type or click a letter below';
     hint.textContent  = '';
@@ -598,6 +713,17 @@ function onTileClick(i) {
     search();
     return;
   }
+  if (freqMode !== null) {
+    if (mem().freq[i] === freqMode) {
+      delete mem().freq[i];
+    } else {
+      mem().freq[i] = freqMode;
+    }
+    buildMemoryButtons();
+    refreshTiles();
+    search();
+    return;
+  }
   selTile = (selTile === i) ? null : i;
   refreshTiles();
 }
@@ -607,14 +733,28 @@ function onTileClick(i) {
 function buildLetterGrid() {
   const c = document.getElementById('letters-grid');
   c.innerHTML = '';
-  for (const L of LETTERS) {
-    const chip = document.createElement('div');
-    chip.className = 'letter-chip';
-    chip.id = 'chip-' + L;
-    chip.textContent = L;
-    chip.addEventListener('click', () => onLetterClick(L));
-    c.appendChild(chip);
-  }
+
+  const addRow = (letters, labelText, labelColor) => {
+    const label = document.createElement('div');
+    label.className = 'freq-label';
+    label.style.color = labelColor;
+    label.textContent = labelText;
+    c.appendChild(label);
+    const row = document.createElement('div');
+    row.className = 'letter-row';
+    for (const L of letters) {
+      const chip = document.createElement('div');
+      chip.className = 'letter-chip';
+      chip.id = 'chip-' + L;
+      chip.textContent = L;
+      chip.addEventListener('click', () => onLetterClick(L));
+      row.appendChild(chip);
+    }
+    c.appendChild(row);
+  };
+
+  addRow(COMMON_LETTERS,   'Common',   '#f39c12');
+  addRow(UNCOMMON_LETTERS, 'Uncommon', '#9b59b6');
   refreshLetterGrid();
 }
 
@@ -643,9 +783,11 @@ function onLetterClick(L) {
     return;
   }
   const cur = mem().status[L];
-  if (!cur)              mem().status[L] = 'must';
-  else if (cur === 'must') mem().status[L] = 'excluded';
-  else                   delete mem().status[L];
+  if (!cur)                    mem().status[L] = 'must';
+  else if (cur === 'must')     mem().status[L] = 'excluded';
+  else if (cur === 'excluded') mem().status[L] = 'common';
+  else if (cur === 'common')   mem().status[L] = 'uncommon';
+  else                         delete mem().status[L];
   buildMemoryButtons();
   refreshLetterGrid();
   search();
@@ -672,7 +814,9 @@ function buildGroupButtons() {
     btn.addEventListener('click', () => {
       selGroup = (selGroup === g) ? null : g;
       selTile  = null;
+      freqMode = null;
       buildGroupButtons();
+      buildFreqModeButtons();
       refreshTiles();
     });
     c.appendChild(btn);
@@ -684,6 +828,33 @@ document.getElementById('clear-groups-btn').addEventListener('click', () => {
   selGroup = null;
   buildMemoryButtons();
   buildGroupButtons();
+  refreshTiles();
+  search();
+});
+
+// ── Frequency mode buttons ────────────────────────────────
+
+function buildFreqModeButtons() {
+  document.getElementById('freq-btn-common').classList.toggle('active',   freqMode === 'common');
+  document.getElementById('freq-btn-uncommon').classList.toggle('active', freqMode === 'uncommon');
+}
+
+['common', 'uncommon'].forEach(mode => {
+  document.getElementById('freq-btn-' + mode).addEventListener('click', () => {
+    freqMode = (freqMode === mode) ? null : mode;
+    selTile  = null;
+    selGroup = null;
+    buildGroupButtons();
+    buildFreqModeButtons();
+    refreshTiles();
+  });
+});
+
+document.getElementById('clear-freq-btn').addEventListener('click', () => {
+  mem().freq = {};
+  freqMode   = null;
+  buildMemoryButtons();
+  buildFreqModeButtons();
   refreshTiles();
   search();
 });
@@ -735,9 +906,13 @@ async function doSearch() {
     if (!groupMap[gid]) groupMap[gid] = [];
     groupMap[gid].push(parseInt(pos));
   }
-  const groups   = Object.values(groupMap).filter(g => g.length > 1);
-  const excluded = Object.entries(mem().status).filter(([,v]) => v === 'excluded').map(([k]) => k);
-  const mustHave = Object.entries(mem().status).filter(([,v]) => v === 'must').map(([k]) => k);
+  const groups          = Object.values(groupMap).filter(g => g.length > 1);
+  const excluded        = Object.entries(mem().status).filter(([,v]) => v === 'excluded').map(([k]) => k);
+  const mustHave        = Object.entries(mem().status).filter(([,v]) => v === 'must').map(([k]) => k);
+  const commonLetters   = Object.entries(mem().status).filter(([,v]) => v === 'common').map(([k]) => k);
+  const uncommonLetters = Object.entries(mem().status).filter(([,v]) => v === 'uncommon').map(([k]) => k);
+  const posCommon       = Object.entries(mem().freq).filter(([,v]) => v === 'common').map(([k]) => parseInt(k));
+  const posUncommon     = Object.entries(mem().freq).filter(([,v]) => v === 'uncommon').map(([k]) => parseInt(k));
 
   const resp = await fetch('/search', {
     method: 'POST',
@@ -747,6 +922,10 @@ async function doSearch() {
       pattern: mem().tiles,
       excluded,
       mustHave,
+      commonLetters,
+      uncommonLetters,
+      posCommon,
+      posUncommon,
       groups,
     }),
   });
@@ -784,6 +963,7 @@ buildLengthButtons();
 buildTiles();
 buildLetterGrid();
 buildGroupButtons();
+buildFreqModeButtons();
 search();
 
 </script>
