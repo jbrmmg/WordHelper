@@ -5,7 +5,7 @@
 
     <groupId>com.jbr.wordhelper</groupId>
     <artifactId>WordHelper</artifactId>
-    <version>26.6.2-SNAPSHOT</version>
+    <version>26.6.3-SNAPSHOT</version>
 
     <name>WordHelper</name>
     <packaging>pom</packaging>
