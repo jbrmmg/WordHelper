@@ -77,6 +77,26 @@ python wordclue.py
 
 ---
 
+## Docker
+
+Both apps share the same pre-built word database, which must exist on the host at `/var/lib/wordhelper/words.db` — see `import_words.py` to build it.
+
+### WordScanner (port 5000)
+
+```bash
+docker build -f docker/Dockerfile-scanner -t wordscanner .
+docker run -d --name wordscanner --restart unless-stopped -p 5000:5000 -v /var/lib/wordhelper/words.db:/var/lib/wordhelper/words.db:ro wordscanner
+```
+
+### WordClue (port 5001)
+
+```bash
+docker build -f docker/Dockerfile-clue -t wordclue .
+docker run -d --name wordclue --restart unless-stopped -p 5001:5000 -v /var/lib/wordhelper/words.db:/var/lib/wordhelper/words.db:ro wordclue
+```
+
+---
+
 ## Deployment
 
 Both apps are packaged via `mvn release` into a single zip and deployed to `/usr/bin/jbr/wordhelper` (production) or `/usr/bin/jbr/dev/wordhelper` (development). Each app runs as its own systemd service:

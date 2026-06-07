@@ -1,0 +1,10 @@
+.venv/
+.git/
+.claude/
+.idea/
+*.iml
+__pycache__/
+*.py[cod]
+src/
+pom.xml
+words.txt
