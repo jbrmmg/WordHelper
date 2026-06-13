@@ -51,6 +51,23 @@ def search():
         if not ok:
             continue
 
+        # A letter placed at specific positions may not appear anywhere else
+        pattern_allowed = {}
+        for pos_str, letter in pattern.items():
+            ltr = letter.lower()
+            if ltr not in pattern_allowed:
+                pattern_allowed[ltr] = set()
+            pattern_allowed[ltr].add(int(pos_str))
+        for ltr, allowed in pattern_allowed.items():
+            for i, c in enumerate(w):
+                if c == ltr and i not in allowed:
+                    ok = False
+                    break
+            if not ok:
+                break
+        if not ok:
+            continue
+
         for ltr in common_req:
             if ltr not in w or ltr not in COMMON_LETTERS:
                 ok = False
