@@ -1,0 +1,50 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - Release
+
+jobs:
+  build:
+    runs-on: wordhelper-prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        run: echo "VERSION=$(date +'%Y.%m').${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Build wordhelper Docker image
+        run: |
+          docker build \
+            -f docker/Dockerfile-scanner \
+            -t nexus.jbrmmg.me.uk:8083/wordhelper:${{ github.sha }} \
+            -t nexus.jbrmmg.me.uk:8083/wordhelper:latest \
+            .
+
+      - name: Build wordclue Docker image
+        run: |
+          docker build \
+            -f docker/Dockerfile-clue \
+            -t nexus.jbrmmg.me.uk:8083/wordclue:${{ github.sha }} \
+            -t nexus.jbrmmg.me.uk:8083/wordclue:latest \
+            .
+
+      - name: Push to Nexus Docker registry
+        run: |
+          docker login nexus.jbrmmg.me.uk:8083 \
+            -u deployment \
+            -p ${{ secrets.NEXUS_PASSWORD }}
+          docker push nexus.jbrmmg.me.uk:8083/wordhelper:${{ github.sha }}
+          docker push nexus.jbrmmg.me.uk:8083/wordhelper:latest
+          docker push nexus.jbrmmg.me.uk:8083/wordclue:${{ github.sha }}
+          docker push nexus.jbrmmg.me.uk:8083/wordclue:latest
+
+      - name: Deploy
+        run: |
+          docker login nexus.jbrmmg.me.uk:8084 \
+            -u deployment \
+            -p ${{ secrets.NEXUS_PASSWORD }}
+          docker compose pull
+          docker compose up -d

@@ -1,0 +1,22 @@
+services:
+  wordhelper-dev:
+    image: nexus.jbrmmg.me.uk:8084/wordhelper-dev:latest
+    container_name: wordhelper-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - jbr-network
+
+  wordclue-dev:
+    image: nexus.jbrmmg.me.uk:8084/wordclue-dev:latest
+    container_name: wordclue-dev
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    networks:
+      - jbr-network
+
+networks:
+  jbr-network:
+    external: true
