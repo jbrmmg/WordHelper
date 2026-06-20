@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
+    volumes:
+      - /var/lib/wordhelper:/var/lib/wordhelper
     networks:
       - jbr-network
 
@@ -14,6 +16,8 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5000"
+    volumes:
+      - /var/lib/wordhelper:/var/lib/wordhelper
     networks:
       - jbr-network
 
