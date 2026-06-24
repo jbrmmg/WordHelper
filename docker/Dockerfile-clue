@@ -9,6 +9,6 @@ COPY wordclue.py ./
 COPY templates/ templates/
 COPY static/ static/
 
-EXPOSE 5000
+EXPOSE 8080
 
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "wordclue:app"]
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "wordclue:app"]

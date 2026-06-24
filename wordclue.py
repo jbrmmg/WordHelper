@@ -109,6 +109,11 @@ def search():
         if not ok:
             continue
 
+        if not groups:
+            unknown = [w[i] for i in range(len(w)) if str(i) not in pattern]
+            if len(unknown) != len(set(unknown)):
+                continue
+
         results.append(w.upper())
 
     return jsonify({'words': results, 'count': len(results)})
