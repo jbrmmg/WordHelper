@@ -485,7 +485,7 @@ function updateCrossMemoryCounts() {
 }
 
 async function evaluate() {
-  const resp = await fetch('/evaluate', {
+  const resp = await fetch('evaluate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(buildPayload()),

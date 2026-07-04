@@ -1,7 +1,9 @@
 import sqlite3
 from flask import Flask, jsonify, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_prefix=1)
 DB_PATH = "/var/lib/wordhelper/words.db"
 
 COMMON_LETTERS   = set('etaoinshrdlcu')

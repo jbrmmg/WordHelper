@@ -914,7 +914,7 @@ async function doSearch() {
   const posCommon       = Object.entries(mem().freq).filter(([,v]) => v === 'common').map(([k]) => parseInt(k));
   const posUncommon     = Object.entries(mem().freq).filter(([,v]) => v === 'uncommon').map(([k]) => parseInt(k));
 
-  const resp = await fetch('/search', {
+  const resp = await fetch('search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
