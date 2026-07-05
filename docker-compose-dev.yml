@@ -6,7 +6,9 @@ services:
     volumes:
       - /var/lib/wordhelper:/var/lib/wordhelper
     networks:
-      - jbr-network
+      jbr-network:
+        aliases:
+          - wordhelper
 
   wordclue-dev:
     image: nexus.jbrmmg.me.uk:8084/wordclue-dev:latest
@@ -15,7 +17,9 @@ services:
     volumes:
       - /var/lib/wordhelper:/var/lib/wordhelper
     networks:
-      - jbr-network
+      jbr-network:
+        aliases:
+          - wordclue
 
 networks:
   jbr-network:
