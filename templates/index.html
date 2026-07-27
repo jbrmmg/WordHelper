@@ -152,6 +152,7 @@
 
   .mem-dot.filtered { background: #555; }
   .mem-dot.available { background: #4caf50; }
+  .mem-dot.in-word  { background: #ff9800; }
 
   .cb-row {
     display: flex;
@@ -472,13 +473,18 @@ function updateCrossMemoryCounts() {
     for (let m = 0; m < MEMORIES; m++) {
       const dot = document.getElementById(`mem-${L}-${m}`);
       const mw = memWords[m];
-      dot.classList.remove('filtered', 'available');
+      dot.classList.remove('filtered', 'available', 'in-word');
       if (mw === null) {
         // unfiltered — stays dark
-      } else if (mw.some(w => w.includes(L))) {
-        dot.classList.add('available');
       } else {
-        dot.classList.add('filtered');
+        const s = letterState[L].memories[m];
+        if (s.inWord || s.includePos.some(Boolean) || s.excludePos.some(Boolean)) {
+          dot.classList.add('in-word');
+        } else if (mw.some(w => w.includes(L))) {
+          dot.classList.add('available');
+        } else {
+          dot.classList.add('filtered');
+        }
       }
     }
   }
