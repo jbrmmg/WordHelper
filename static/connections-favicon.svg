@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Row 1: Yellow -->
+  <rect x="24"  y="24"  width="107" height="107" rx="12" fill="#f9df6d"/>
+  <rect x="143" y="24"  width="107" height="107" rx="12" fill="#f9df6d"/>
+  <rect x="262" y="24"  width="107" height="107" rx="12" fill="#f9df6d"/>
+  <rect x="381" y="24"  width="107" height="107" rx="12" fill="#f9df6d"/>
+  <!-- Row 2: Green -->
+  <rect x="24"  y="143" width="107" height="107" rx="12" fill="#a0c35a"/>
+  <rect x="143" y="143" width="107" height="107" rx="12" fill="#a0c35a"/>
+  <rect x="262" y="143" width="107" height="107" rx="12" fill="#a0c35a"/>
+  <rect x="381" y="143" width="107" height="107" rx="12" fill="#a0c35a"/>
+  <!-- Row 3: Blue -->
+  <rect x="24"  y="262" width="107" height="107" rx="12" fill="#b0c4ef"/>
+  <rect x="143" y="262" width="107" height="107" rx="12" fill="#b0c4ef"/>
+  <rect x="262" y="262" width="107" height="107" rx="12" fill="#b0c4ef"/>
+  <rect x="381" y="262" width="107" height="107" rx="12" fill="#b0c4ef"/>
+  <!-- Row 4: Purple -->
+  <rect x="24"  y="381" width="107" height="107" rx="12" fill="#ba81c5"/>
+  <rect x="143" y="381" width="107" height="107" rx="12" fill="#ba81c5"/>
+  <rect x="262" y="381" width="107" height="107" rx="12" fill="#ba81c5"/>
+  <rect x="381" y="381" width="107" height="107" rx="12" fill="#ba81c5"/>
+</svg>
