@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connections Helper</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+h1 {
+  text-align: center;
+  color: #a0d4f5;
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  background: #2a2a4a;
+  border: 1px solid #3a3a6a;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6a8aaa;
+  margin-bottom: 10px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.btn {
+  padding: 9px 22px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-primary  { background: #a0d4f5; color: #1a1a2e; }
+.btn-primary:hover { background: #c0e4ff; }
+
+.btn-danger   { background: #2a1a1a; border: 1px solid #633; color: #c66; }
+.btn-danger:hover  { background: #3a1a1a; border-color: #f44336; color: #f44336; }
+
+.btn-secondary { background: #2a2a4a; border: 1px solid #3a3a6a; color: #aac; }
+.btn-secondary:hover { border-color: #a0d4f5; color: #a0d4f5; }
+
+/* ── Phase 1: Entry ──────────────────────────────────────── */
+
+#entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.word-input {
+  padding: 10px 6px;
+  background: #1e1e3a;
+  border: 2px solid #3a3a6a;
+  border-radius: 8px;
+  color: #eee;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.word-input::placeholder { color: #445; font-weight: normal; text-transform: none;
+                           font-size: 11px; letter-spacing: 0; }
+.word-input:focus  { outline: none; border-color: #a0d4f5; }
+.word-input.error  { border-color: #f44336; }
+
+#paste-input {
+  width: 100%;
+  padding: 8px;
+  background: #1e1e3a;
+  border: 1px solid #3a3a6a;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 12px;
+  resize: vertical;
+  min-height: 58px;
+  font-family: Arial, sans-serif;
+}
+
+#paste-input:focus { outline: none; border-color: #6a8aaa; }
+
+#entry-error {
+  color: #f44336;
+  font-size: 13px;
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+.entry-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+/* ── Phase 2: Board ──────────────────────────────────────── */
+
+#group-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.group-badge {
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: default;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 3px solid transparent;
+  user-select: none;
+}
+
+.group-badge.yellow { background: #f9df6d; color: #1a1a1a; }
+.group-badge.green  { background: #a0c35a; color: #1a1a1a; }
+.group-badge.blue   { background: #b0c4ef; color: #1a1a1a; }
+.group-badge.purple { background: #ba81c5; color: #1a1a1a; }
+
+.group-badge.full        { border-color: rgba(0,0,0,0.35); }
+.group-badge.drag-target { transform: scale(1.1); box-shadow: 0 0 14px rgba(255,255,255,0.45); }
+
+#word-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 860px;
+  margin: 0 auto 16px;
+  align-items: start;
+}
+
+/* ── Word cards ──────────────────────────────────────────── */
+
+.word-card {
+  background: #2a2a4a;
+  border: 2px solid #3a3a6a;
+  border-radius: 10px;
+  padding: 12px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+  user-select: none;
+}
+
+.word-card:hover:not(.yellow):not(.green):not(.blue):not(.purple) { border-color: #6a8aaa; }
+.word-card.dragging   { opacity: 0.45; }
+.word-card.drag-target { border-color: #fff !important; box-shadow: 0 0 12px rgba(255,255,255,0.3); }
+
+.word-card.yellow { background: #f9df6d; border-color: #e2c040; color: #1a1a1a; }
+.word-card.green  { background: #a0c35a; border-color: #7aa033; color: #1a1a1a; }
+.word-card.blue   { background: #b0c4ef; border-color: #7a9cd8; color: #1a1a1a; }
+.word-card.purple { background: #ba81c5; border-color: #9558a8; color: #1a1a1a; }
+
+.word-card.yellow:hover { border-color: #b89820; }
+.word-card.green:hover  { border-color: #5a8010; }
+.word-card.blue:hover   { border-color: #5a7cb8; }
+.word-card.purple:hover { border-color: #753888; }
+
+.card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+}
+
+.card-label {
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  flex: 1;
+  text-align: center;
+}
+
+.card-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.35;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.card-btn:hover { opacity: 0.85; }
+
+.note-btn { font-size: 15px; }
+.note-btn.active   { opacity: 0.85; }
+.note-btn.has-note { opacity: 0.7; color: #a0d4f5; }
+
+.clear-btn { font-size: 13px; display: none; }
+
+.word-card.yellow .clear-btn,
+.word-card.green  .clear-btn,
+.word-card.blue   .clear-btn,
+.word-card.purple .clear-btn { display: inline-block; }
+
+.word-card.yellow .note-btn.has-note,
+.word-card.green  .note-btn.has-note,
+.word-card.blue   .note-btn.has-note,
+.word-card.purple .note-btn.has-note { color: #444; }
+
+.word-card.yellow .card-btn,
+.word-card.green  .card-btn,
+.word-card.blue   .card-btn,
+.word-card.purple .card-btn { color: #1a1a1a; }
+
+.card-note-area { display: none; margin-top: 8px; }
+.word-card.note-open .card-note-area { display: block; }
+
+.card-note {
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+  color: inherit;
+  font-size: 12px;
+  resize: vertical;
+  min-height: 64px;
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+}
+
+.card-note::placeholder { opacity: 0.45; }
+.card-note:focus { outline: none; }
+
+.board-actions {
+  display: flex;
+  justify-content: center;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Shake ───────────────────────────────────────────────── */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  45%       { transform: translateX(6px); }
+  70%       { transform: translateX(-4px); }
+  88%       { transform: translateX(3px); }
+}
+
+.shake { animation: shake 0.35s ease; }
+
+/* ── Phase 3: Solved ─────────────────────────────────────── */
+
+#solved-rows {
+  max-width: 860px;
+  margin: 0 auto 16px;
+}
+
+.solved-row {
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.solved-row.yellow { background: #f9df6d; }
+.solved-row.green  { background: #a0c35a; }
+.solved-row.blue   { background: #b0c4ef; }
+.solved-row.purple { background: #ba81c5; }
+
+.solved-row-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.solved-title-input {
+  flex: 0 0 190px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+}
+
+.solved-title-input::placeholder { opacity: 0.4; font-weight: normal; }
+.solved-title-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+
+.solved-words {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.solved-word-chip {
+  background: rgba(255, 255, 255, 0.38);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.solved-notes-btn {
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  color: #1a1a1a;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.solved-notes-btn:hover { background: rgba(0, 0, 0, 0.22); }
+
+.solved-notes-area {
+  display: none;
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.solved-row.notes-open .solved-notes-area { display: block; }
+
+.solved-note-entry {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.solved-note-entry:last-child { margin-bottom: 0; }
+
+.solved-note-word {
+  font-weight: bold;
+  flex-shrink: 0;
+  min-width: 90px;
+}
+
+.solved-note-text       { opacity: 0.85; }
+.solved-note-text.empty { opacity: 0.38; font-style: italic; }
+
+.solved-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (max-width: 580px) {
+  #entry-grid { grid-template-columns: repeat(2, 1fr); }
+  #word-grid  { grid-template-columns: repeat(2, 1fr); }
+  .group-badge { font-size: 12px; padding: 6px 12px; }
+  .solved-row-top { flex-direction: column; align-items: flex-start; }
+  .solved-title-input { flex: 1 1 auto; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Phase 1: Word Entry ─────────────────────────────── -->
+<div id="phase-entry">
+  <h1>Connections Helper</h1>
+
+  <div class="panel">
+    <div class="panel-title">Enter the 16 puzzle words</div>
+    <div id="entry-grid"></div>
+    <div id="entry-error"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Or paste all 16 words (comma, tab, or newline separated)</div>
+    <textarea id="paste-input" placeholder="APPLE, BEAR, CRANE, DRUM, ..."></textarea>
+  </div>
+
+  <div class="entry-actions">
+    <button class="btn btn-primary" id="start-btn">Start &#x2192;</button>
+  </div>
+</div>
+
+<!-- ── Phase 2: Working Board ──────────────────────────── -->
+<div id="phase-board" hidden>
+  <h1>Connections Helper</h1>
+  <div id="group-bar"></div>
+  <div id="word-grid"></div>
+  <div class="board-actions">
+    <button class="btn btn-danger" id="reset-btn">Reset</button>
+  </div>
+</div>
+
+<!-- ── Phase 3: Solved ─────────────────────────────────── -->
+<div id="phase-solved" hidden>
+  <h1>Connections Helper &#x2014; Solved!</h1>
+  <div id="solved-rows"></div>
+  <div class="solved-actions">
+    <button class="btn btn-secondary" id="unsolved-btn">&#x2190; Adjust</button>
+    <button class="btn btn-danger"    id="reset-btn-solved">Reset</button>
+  </div>
+</div>
+
+<script>
+const GROUPS      = ['yellow', 'green', 'blue', 'purple'];
+const GROUP_NAMES = { yellow: 'Yellow', green: 'Green', blue: 'Blue', purple: 'Purple' };
+const STATE_KEY   = 'connections_state';
+
+let state = defaultState();
+
+// Open-note tracking survives re-renders within a session
+const openNotes = new Set();
+
+function defaultState() {
+  return {
+    words:       [],
+    assignments: {},
+    notes:       {},
+    titles:      { yellow: '', green: '', blue: '', purple: '' },
+  };
+}
+
+// ── Persistence ───────────────────────────────────────────
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s || !Array.isArray(s.words) || s.words.length !== 16) return false;
+    state = {
+      words:       s.words,
+      assignments: s.assignments || {},
+      notes:       s.notes       || {},
+      titles:      s.titles      || { yellow: '', green: '', blue: '', purple: '' },
+    };
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+}
+
+function clearState() {
+  localStorage.removeItem(STATE_KEY);
+  state = defaultState();
+  openNotes.clear();
+}
+
+// ── Phase management ──────────────────────────────────────
+
+function showPhase(name) {
+  document.getElementById('phase-entry').hidden  = (name !== 'entry');
+  document.getElementById('phase-board').hidden  = (name !== 'board');
+  document.getElementById('phase-solved').hidden = (name !== 'solved');
+}
+
+function countGroup(group) {
+  return Object.values(state.assignments).filter(v => v === group).length;
+}
+
+function allAssigned() {
+  return Object.keys(state.assignments).length === 16;
+}
+
+// ── Phase 1: Entry ────────────────────────────────────────
+
+function buildEntryGrid() {
+  const grid = document.getElementById('entry-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const inp = document.createElement('input');
+    inp.type        = 'text';
+    inp.className   = 'word-input';
+    inp.placeholder = `Word ${i + 1}`;
+    inp.maxLength   = 30;
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.toUpperCase();
+      clearEntryError();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('start-btn').click();
+    });
+    grid.appendChild(inp);
+  }
+}
+
+function clearEntryError() {
+  document.getElementById('entry-error').textContent = '';
+  document.querySelectorAll('.word-input').forEach(i => i.classList.remove('error'));
+}
+
+document.getElementById('paste-input').addEventListener('input', e => {
+  const words = e.target.value
+    .split(/[\n,\t]+/)
+    .map(w => w.trim().toUpperCase())
+    .filter(w => w.length > 0);
+  if (words.length >= 16) {
+    const inputs = document.querySelectorAll('.word-input');
+    for (let i = 0; i < 16; i++) inputs[i].value = words[i] || '';
+    e.target.value = '';
+    clearEntryError();
+  }
+});
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  const inputs = Array.from(document.querySelectorAll('.word-input'));
+  const words  = inputs.map(inp => inp.value.trim().toUpperCase());
+  const errEl  = document.getElementById('entry-error');
+
+  clearEntryError();
+
+  const emptyInputs = inputs.filter(inp => !inp.value.trim());
+  if (emptyInputs.length > 0) {
+    emptyInputs.forEach(inp => inp.classList.add('error'));
+    errEl.textContent = `${emptyInputs.length} word${emptyInputs.length > 1 ? 's' : ''} missing.`;
+    return;
+  }
+
+  const seen = new Set();
+  let hasDupe = false;
+  words.forEach((w, i) => {
+    if (seen.has(w)) { inputs[i].classList.add('error'); hasDupe = true; }
+    seen.add(w);
+  });
+  if (hasDupe) {
+    errEl.textContent = 'All 16 words must be unique.';
+    return;
+  }
+
+  state.words       = words;
+  state.assignments = {};
+  state.notes       = {};
+  state.titles      = { yellow: '', green: '', blue: '', purple: '' };
+  openNotes.clear();
+  saveState();
+  renderBoard();
+  showPhase('board');
+});
+
+// ── Phase 2: Board ────────────────────────────────────────
+
+let dragWord = null;
+
+function renderBoard() {
+  renderGroupBar();
+  renderWordGrid();
+}
+
+function renderGroupBar() {
+  const bar = document.getElementById('group-bar');
+  bar.innerHTML = '';
+  for (const group of GROUPS) {
+    const count = countGroup(group);
+    const badge = document.createElement('div');
+    badge.id        = `badge-${group}`;
+    badge.className = `group-badge ${group}${count >= 4 ? ' full' : ''}`;
+    badge.textContent = `${GROUP_NAMES[group]} ${count}/4`;
+
+    badge.addEventListener('dragover', e => {
+      if (dragWord !== null) { e.preventDefault(); badge.classList.add('drag-target'); }
+    });
+    badge.addEventListener('dragleave', () => badge.classList.remove('drag-target'));
+    badge.addEventListener('drop', e => {
+      e.preventDefault();
+      badge.classList.remove('drag-target');
+      if (dragWord !== null) assignGroup(dragWord, group);
+    });
+
+    bar.appendChild(badge);
+  }
+}
+
+function renderWordGrid() {
+  const grid = document.getElementById('word-grid');
+  grid.innerHTML = '';
+  for (const word of state.words) grid.appendChild(createCard(word));
+}
+
+function createCard(word) {
+  const group    = state.assignments[word] || null;
+  const noteText = state.notes[word] || '';
+  const noteOpen = openNotes.has(word);
+
+  const card = document.createElement('div');
+  card.id        = `card-${word}`;
+  card.className = `word-card${group ? ' ' + group : ''}${noteOpen ? ' note-open' : ''}`;
+  card.draggable = true;
+
+  const main = document.createElement('div');
+  main.className = 'card-main';
+
+  const label = document.createElement('span');
+  label.className   = 'card-label';
+  label.textContent = word;
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className   = 'card-btn clear-btn';
+  clearBtn.textContent = '✕';
+  clearBtn.title       = 'Remove from group';
+  clearBtn.setAttribute('draggable', 'false');
+  clearBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    delete state.assignments[word];
+    saveState();
+    renderBoard();
+  });
+
+  const noteBtn = document.createElement('button');
+  noteBtn.className   = `card-btn note-btn${noteText ? ' has-note' : ''}${noteOpen ? ' active' : ''}`;
+  noteBtn.textContent = '✎';
+  noteBtn.title       = 'Toggle notes';
+  noteBtn.setAttribute('draggable', 'false');
+
+  main.appendChild(label);
+  main.appendChild(clearBtn);
+  main.appendChild(noteBtn);
+
+  const noteArea = document.createElement('div');
+  noteArea.className = 'card-note-area';
+
+  const textarea = document.createElement('textarea');
+  textarea.className   = 'card-note';
+  textarea.placeholder = 'Research notes…';
+  textarea.value       = noteText;
+  textarea.setAttribute('draggable', 'false');
+
+  noteArea.appendChild(textarea);
+  card.appendChild(main);
+  card.appendChild(noteArea);
+
+  // Note toggle
+  noteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = card.classList.toggle('note-open');
+    noteBtn.classList.toggle('active', isOpen);
+    if (isOpen) { openNotes.add(word); textarea.focus(); }
+    else        { openNotes.delete(word); }
+  });
+
+  // Prevent textarea events bubbling to card
+  textarea.addEventListener('click',     e => e.stopPropagation());
+  textarea.addEventListener('mousedown', e => e.stopPropagation());
+  textarea.addEventListener('dragstart', e => e.stopPropagation());
+
+  textarea.addEventListener('input', () => {
+    state.notes[word] = textarea.value;
+    noteBtn.classList.toggle('has-note', !!textarea.value.trim());
+    saveState();
+  });
+
+  // Card click → cycle group
+  card.addEventListener('click', e => {
+    if (e.target === textarea || e.target === noteBtn) return;
+    cycleGroup(word);
+  });
+
+  // Drag source
+  card.addEventListener('dragstart', e => {
+    dragWord = word;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => card.classList.add('dragging'), 0);
+  });
+  card.addEventListener('dragend', () => {
+    dragWord = null;
+    card.classList.remove('dragging');
+    document.querySelectorAll('.drag-target').forEach(el => el.classList.remove('drag-target'));
+  });
+
+  // Drop target — swap positions
+  card.addEventListener('dragover', e => {
+    if (dragWord !== null && dragWord !== word) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-target');
+    }
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-target'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-target');
+    if (dragWord !== null && dragWord !== word) {
+      const i = state.words.indexOf(dragWord);
+      const j = state.words.indexOf(word);
+      [state.words[i], state.words[j]] = [state.words[j], state.words[i]];
+      saveState();
+      renderWordGrid();
+    }
+  });
+
+  return card;
+}
+
+function cycleGroup(word) {
+  const current = state.assignments[word] || null;
+  const curIdx  = current ? GROUPS.indexOf(current) : -1;
+
+  // Temporarily remove so countGroup reflects available slots
+  if (current) delete state.assignments[word];
+
+  // Walk forward from next position; skip full groups (with shake feedback)
+  let assigned = false;
+  for (let i = curIdx + 1; i < GROUPS.length; i++) {
+    const g = GROUPS[i];
+    if (countGroup(g) < 4) {
+      state.assignments[word] = g;
+      assigned = true;
+      break;
+    }
+    shakeEl(`badge-${g}`);
+  }
+  // If nothing found: stays unassigned (already deleted above)
+
+  saveState();
+  renderBoard();
+  if (allAssigned()) { renderSolved(); showPhase('solved'); }
+}
+
+function assignGroup(word, group) {
+  const alreadyThere = state.assignments[word] === group;
+  if (!alreadyThere && countGroup(group) >= 4) {
+    shakeEl(`badge-${group}`);
+    return;
+  }
+  state.assignments[word] = group;
+  saveState();
+  renderBoard();
+  if (allAssigned()) { renderSolved(); showPhase('solved'); }
+}
+
+function shakeEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
+  el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+}
+
+document.getElementById('reset-btn').addEventListener('click', confirmReset);
+
+// ── Phase 3: Solved ───────────────────────────────────────
+
+function renderSolved() {
+  const container = document.getElementById('solved-rows');
+  container.innerHTML = '';
+
+  for (const group of GROUPS) {
+    const groupWords = state.words.filter(w => state.assignments[w] === group);
+
+    const row = document.createElement('div');
+    row.className = `solved-row ${group}`;
+
+    const top = document.createElement('div');
+    top.className = 'solved-row-top';
+
+    const titleInput = document.createElement('input');
+    titleInput.type        = 'text';
+    titleInput.className   = 'solved-title-input';
+    titleInput.placeholder = 'Category title…';
+    titleInput.value       = state.titles[group] || '';
+    titleInput.addEventListener('input', () => {
+      state.titles[group] = titleInput.value;
+      saveState();
+    });
+
+    const chipsWrap = document.createElement('div');
+    chipsWrap.className = 'solved-words';
+    for (const w of groupWords) {
+      const chip = document.createElement('div');
+      chip.className   = 'solved-word-chip';
+      chip.textContent = w;
+      chipsWrap.appendChild(chip);
+    }
+
+    const notesBtn = document.createElement('button');
+    notesBtn.className   = 'solved-notes-btn';
+    notesBtn.textContent = 'Notes ▾';
+    notesBtn.addEventListener('click', () => {
+      const open = row.classList.toggle('notes-open');
+      notesBtn.textContent = open ? 'Notes ▴' : 'Notes ▾';
+    });
+
+    top.appendChild(titleInput);
+    top.appendChild(chipsWrap);
+    top.appendChild(notesBtn);
+
+    const notesArea = document.createElement('div');
+    notesArea.className = 'solved-notes-area';
+    for (const w of groupWords) {
+      const entry = document.createElement('div');
+      entry.className = 'solved-note-entry';
+
+      const wLabel = document.createElement('span');
+      wLabel.className   = 'solved-note-word';
+      wLabel.textContent = w + ':';
+
+      const note = (state.notes[w] || '').trim();
+      const noteSpan = document.createElement('span');
+      noteSpan.className   = `solved-note-text${note ? '' : ' empty'}`;
+      noteSpan.textContent = note || '(no notes)';
+
+      entry.appendChild(wLabel);
+      entry.appendChild(noteSpan);
+      notesArea.appendChild(entry);
+    }
+
+    row.appendChild(top);
+    row.appendChild(notesArea);
+    container.appendChild(row);
+  }
+}
+
+document.getElementById('unsolved-btn').addEventListener('click', () => {
+  renderBoard();
+  showPhase('board');
+});
+
+document.getElementById('reset-btn-solved').addEventListener('click', confirmReset);
+
+// ── Reset ─────────────────────────────────────────────────
+
+function confirmReset() {
+  if (!confirm('Reset the puzzle? All assignments, notes and titles will be cleared.')) return;
+  clearState();
+  buildEntryGrid();
+  document.getElementById('paste-input').value = '';
+  showPhase('entry');
+}
+
+// ── Init ──────────────────────────────────────────────────
+
+buildEntryGrid();
+
+if (loadState() && state.words.length === 16) {
+  if (allAssigned()) {
+    renderSolved();
+    showPhase('solved');
+  } else {
+    renderBoard();
+    showPhase('board');
+  }
+}
+</script>
+</body>
+</html>

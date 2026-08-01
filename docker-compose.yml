@@ -17,6 +17,13 @@ services:
     networks:
       - jbr-network
 
+  connections:
+    image: nexus.jbrmmg.me.uk:8084/connections:latest
+    container_name: connections
+    restart: unless-stopped
+    networks:
+      - jbr-network
+
 networks:
   jbr-network:
     external: true

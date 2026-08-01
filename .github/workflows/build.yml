@@ -31,6 +31,14 @@ jobs:
             -t nexus.jbrmmg.me.uk:8083/wordclue:latest \
             .
 
+      - name: Build connections Docker image
+        run: |
+          docker build \
+            -f docker/Dockerfile-connections \
+            -t nexus.jbrmmg.me.uk:8083/connections:${{ github.sha }} \
+            -t nexus.jbrmmg.me.uk:8083/connections:latest \
+            .
+
       - name: Push to Nexus Docker registry
         run: |
           docker login nexus.jbrmmg.me.uk:8083 \
@@ -40,6 +48,8 @@ jobs:
           docker push nexus.jbrmmg.me.uk:8083/wordhelper:latest
           docker push nexus.jbrmmg.me.uk:8083/wordclue:${{ github.sha }}
           docker push nexus.jbrmmg.me.uk:8083/wordclue:latest
+          docker push nexus.jbrmmg.me.uk:8083/connections:${{ github.sha }}
+          docker push nexus.jbrmmg.me.uk:8083/connections:latest
 
       - name: Deploy
         run: |

@@ -21,6 +21,15 @@ services:
         aliases:
           - wordclue
 
+  connections-dev:
+    image: nexus.jbrmmg.me.uk:8084/connections-dev:latest
+    container_name: connections-dev
+    restart: unless-stopped
+    networks:
+      jbr-network:
+        aliases:
+          - connections
+
 networks:
   jbr-network:
     external: true
