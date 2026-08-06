@@ -111,10 +111,12 @@ def search():
         if not ok:
             continue
 
-        if not groups:
-            unknown = [w[i] for i in range(len(w)) if str(i) not in pattern]
-            if len(unknown) != len(set(unknown)):
-                continue
+        all_grouped = set()
+        for group in groups:
+            all_grouped.update(group)
+        unknown = [w[i] for i in range(len(w)) if i not in all_grouped and str(i) not in pattern]
+        if len(unknown) != len(set(unknown)):
+            continue
 
         results.append(w.upper())
 
