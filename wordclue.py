@@ -26,6 +26,7 @@ def search():
     uncommon_req  = [c.lower() for c in data.get('uncommonLetters', [])]
     pos_common    = [int(p) for p in data.get('posCommon', [])]
     pos_uncommon  = [int(p) for p in data.get('posUncommon', [])]
+    pos_exclude   = data.get('posExclude', {})    # {"1": ["E", "A"]}
     groups        = data.get('groups', [])        # [[0, 3], [1, 4], ...]
 
     con = sqlite3.connect(DB_PATH)
@@ -66,6 +67,13 @@ def search():
                     ok = False
                     break
             if not ok:
+                break
+        if not ok:
+            continue
+
+        for pos_str, letters in pos_exclude.items():
+            if w[int(pos_str)] in [l.lower() for l in letters]:
+                ok = False
                 break
         if not ok:
             continue
