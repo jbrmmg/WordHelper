@@ -262,6 +262,8 @@ h1 {
 .board-actions {
   display: flex;
   justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
   max-width: 860px;
   margin: 0 auto;
 }
@@ -426,6 +428,10 @@ h1 {
   <div id="group-bar"></div>
   <div id="word-grid"></div>
   <div class="board-actions">
+    <button class="btn btn-secondary" id="shuffle-btn">Shuffle</button>
+    <button class="btn btn-secondary" id="arrange-btn">Arrange</button>
+    <button class="btn btn-secondary" id="reset-order-btn">Reset Order</button>
+    <button class="btn btn-secondary" id="edit-words-btn">Edit Words</button>
     <button class="btn btn-danger" id="reset-btn">Reset</button>
   </div>
 </div>
@@ -436,6 +442,7 @@ h1 {
   <div id="solved-rows"></div>
   <div class="solved-actions">
     <button class="btn btn-secondary" id="unsolved-btn">&#x2190; Adjust</button>
+    <button class="btn btn-secondary" id="edit-words-btn-solved">Edit Words</button>
     <button class="btn btn-danger"    id="reset-btn-solved">Reset</button>
   </div>
 </div>
@@ -446,16 +453,18 @@ const GROUP_NAMES = { yellow: 'Yellow', green: 'Green', blue: 'Blue', purple: 'P
 const STATE_KEY   = 'connections_state';
 
 let state = defaultState();
+let prevState = null; // saved before entering edit-words mode
 
 // Open-note tracking survives re-renders within a session
 const openNotes = new Set();
 
 function defaultState() {
   return {
-    words:       [],
-    assignments: {},
-    notes:       {},
-    titles:      { yellow: '', green: '', blue: '', purple: '' },
+    words:         [],
+    originalOrder: [],
+    assignments:   {},
+    notes:         {},
+    titles:        { yellow: '', green: '', blue: '', purple: '' },
   };
 }
 
@@ -468,10 +477,11 @@ function loadState() {
     const s = JSON.parse(raw);
     if (!s || !Array.isArray(s.words) || s.words.length !== 16) return false;
     state = {
-      words:       s.words,
-      assignments: s.assignments || {},
-      notes:       s.notes       || {},
-      titles:      s.titles      || { yellow: '', green: '', blue: '', purple: '' },
+      words:         s.words,
+      originalOrder: s.originalOrder || s.words,
+      assignments:   s.assignments || {},
+      notes:         s.notes       || {},
+      titles:        s.titles      || { yellow: '', green: '', blue: '', purple: '' },
     };
     return true;
   } catch (e) {
@@ -570,10 +580,27 @@ document.getElementById('start-btn').addEventListener('click', () => {
     return;
   }
 
-  state.words       = words;
-  state.assignments = {};
-  state.notes       = {};
-  state.titles      = { yellow: '', green: '', blue: '', purple: '' };
+  if (prevState) {
+    // Editing: preserve assignments/notes/titles for unchanged words
+    const newAssignments = {};
+    const newNotes = {};
+    words.forEach(w => {
+      if (prevState.assignments[w]) newAssignments[w] = prevState.assignments[w];
+      if (prevState.notes[w])       newNotes[w]       = prevState.notes[w];
+    });
+    state.words         = words;
+    state.originalOrder = [...words];
+    state.assignments   = newAssignments;
+    state.notes         = newNotes;
+    state.titles        = prevState.titles;
+    prevState = null;
+  } else {
+    state.words         = words;
+    state.originalOrder = [...words];
+    state.assignments   = {};
+    state.notes         = {};
+    state.titles        = { yellow: '', green: '', blue: '', purple: '' };
+  }
   openNotes.clear();
   saveState();
   renderBoard();
@@ -860,10 +887,69 @@ document.getElementById('unsolved-btn').addEventListener('click', () => {
 
 document.getElementById('reset-btn-solved').addEventListener('click', confirmReset);
 
+// ── Word order ────────────────────────────────────────────
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function shuffleWords() {
+  const arr = [...state.words];
+  shuffle(arr);
+  state.words = arr;
+  saveState();
+  renderWordGrid();
+}
+
+function arrangeWords() {
+  // Full groups first: purple → blue → green → yellow
+  const grouped = [];
+  const rest = [];
+  for (const group of ['purple', 'blue', 'green', 'yellow']) {
+    const gw = state.words.filter(w => state.assignments[w] === group);
+    if (gw.length === 4) grouped.push(...gw);
+    else                 rest.push(...gw);
+  }
+  // Unassigned words also go into rest
+  state.words.filter(w => !state.assignments[w]).forEach(w => rest.push(w));
+  shuffle(rest);
+  state.words = [...grouped, ...rest];
+  saveState();
+  renderWordGrid();
+}
+
+function resetOrder() {
+  state.words = [...state.originalOrder];
+  saveState();
+  renderWordGrid();
+}
+
+document.getElementById('shuffle-btn').addEventListener('click', shuffleWords);
+document.getElementById('arrange-btn').addEventListener('click', arrangeWords);
+document.getElementById('reset-order-btn').addEventListener('click', resetOrder);
+
+// ── Edit Words ────────────────────────────────────────────
+
+function editWords() {
+  prevState = JSON.parse(JSON.stringify(state));
+  buildEntryGrid();
+  const inputs = document.querySelectorAll('.word-input');
+  state.words.forEach((w, i) => { inputs[i].value = w; });
+  document.getElementById('paste-input').value = '';
+  showPhase('entry');
+}
+
+document.getElementById('edit-words-btn').addEventListener('click', editWords);
+document.getElementById('edit-words-btn-solved').addEventListener('click', editWords);
+
 // ── Reset ─────────────────────────────────────────────────
 
 function confirmReset() {
   if (!confirm('Reset the puzzle? All assignments, notes and titles will be cleared.')) return;
+  prevState = null;
   clearState();
   buildEntryGrid();
   document.getElementById('paste-input').value = '';
