@@ -258,6 +258,8 @@ h1 {
 
 .colour-dot:hover        { border-color: rgba(0,0,0,0.55); opacity: 0.85; }
 .colour-dot.active       { border-color: rgba(0,0,0,0.65); box-shadow: 0 0 0 2px rgba(255,255,255,0.45); }
+.colour-dot.group-full   { opacity: 0.2; cursor: not-allowed; filter: grayscale(60%); }
+.colour-dot.group-full:hover { border-color: rgba(0,0,0,0.22); opacity: 0.2; }
 .colour-dot.yellow       { background: #f9df6d; }
 .colour-dot.green        { background: #a0c35a; }
 .colour-dot.blue         { background: #b0c4ef; }
@@ -702,9 +704,11 @@ function createCard(word) {
   coloursRow.className = 'card-colours';
   for (const g of GROUPS) {
     const dot = document.createElement('button');
-    dot.className = `colour-dot ${g}${group === g ? ' active' : ''}`;
+    const groupFull = countGroup(g) >= 4 && group !== g;
+    dot.className = `colour-dot ${g}${group === g ? ' active' : ''}${groupFull ? ' group-full' : ''}`;
     dot.title = GROUP_NAMES[g];
     dot.setAttribute('draggable', 'false');
+    if (groupFull) dot.disabled = true;
     dot.addEventListener('click', e => {
       e.stopPropagation();
       if (state.assignments[word] === g) {
