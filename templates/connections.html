@@ -418,7 +418,7 @@ h1 {
   </div>
 
   <div class="entry-actions">
-    <button class="btn btn-primary" id="start-btn">Start &#x2192;</button>
+    <button class="btn btn-primary" id="start-btn">&#x25B6; Start</button>
   </div>
 </div>
 
@@ -428,11 +428,12 @@ h1 {
   <div id="group-bar"></div>
   <div id="word-grid"></div>
   <div class="board-actions">
-    <button class="btn btn-secondary" id="shuffle-btn">Shuffle</button>
-    <button class="btn btn-secondary" id="arrange-btn">Arrange</button>
-    <button class="btn btn-secondary" id="reset-order-btn">Reset Order</button>
-    <button class="btn btn-secondary" id="edit-words-btn">Edit Words</button>
-    <button class="btn btn-danger" id="reset-btn">Reset</button>
+    <button class="btn btn-secondary" id="shuffle-btn">&#x21C4; Shuffle</button>
+    <button class="btn btn-secondary" id="arrange-btn">&#x229E; Arrange</button>
+    <button class="btn btn-secondary" id="reset-order-btn">&#x21A9; Reset Order</button>
+    <button class="btn btn-secondary" id="clear-colours-btn">&#x2298; Clear Colours</button>
+    <button class="btn btn-secondary" id="edit-words-btn">&#x270F; Edit Words</button>
+    <button class="btn btn-danger" id="reset-btn">&#x26A0; Reset</button>
   </div>
 </div>
 
@@ -442,8 +443,8 @@ h1 {
   <div id="solved-rows"></div>
   <div class="solved-actions">
     <button class="btn btn-secondary" id="unsolved-btn">&#x2190; Adjust</button>
-    <button class="btn btn-secondary" id="edit-words-btn-solved">Edit Words</button>
-    <button class="btn btn-danger"    id="reset-btn-solved">Reset</button>
+    <button class="btn btn-secondary" id="edit-words-btn-solved">&#x270F; Edit Words</button>
+    <button class="btn btn-danger"    id="reset-btn-solved">&#x26A0; Reset</button>
   </div>
 </div>
 
@@ -930,6 +931,14 @@ function resetOrder() {
 document.getElementById('shuffle-btn').addEventListener('click', shuffleWords);
 document.getElementById('arrange-btn').addEventListener('click', arrangeWords);
 document.getElementById('reset-order-btn').addEventListener('click', resetOrder);
+
+function clearColours() {
+  state.assignments = {};
+  saveState();
+  renderBoard();
+}
+
+document.getElementById('clear-colours-btn').addEventListener('click', clearColours);
 
 // ── Edit Words ────────────────────────────────────────────
 
