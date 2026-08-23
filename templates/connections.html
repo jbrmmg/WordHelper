@@ -222,12 +222,8 @@ h1 {
 .note-btn.active   { opacity: 0.85; }
 .note-btn.has-note { opacity: 0.7; color: #a0d4f5; }
 
-.clear-btn { font-size: 13px; display: none; }
-
-.word-card.yellow .clear-btn,
-.word-card.green  .clear-btn,
-.word-card.blue   .clear-btn,
-.word-card.purple .clear-btn { display: inline-block; }
+.clear-btn { font-size: 12px; opacity: 0.45; padding: 1px 4px; }
+.clear-btn.hidden { display: none; }
 
 .word-card.yellow .note-btn.has-note,
 .word-card.green  .note-btn.has-note,
@@ -238,6 +234,34 @@ h1 {
 .word-card.green  .card-btn,
 .word-card.blue   .card-btn,
 .word-card.purple .card-btn { color: #1a1a1a; }
+
+/* ── Colour selector dots ────────────────────────────────── */
+
+.card-colours {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.colour-dot {
+  width: 20px;
+  height: 10px;
+  border-radius: 3px;
+  border: 2px solid rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: border-color 0.12s, box-shadow 0.12s, opacity 0.12s;
+}
+
+.colour-dot:hover        { border-color: rgba(0,0,0,0.55); opacity: 0.85; }
+.colour-dot.active       { border-color: rgba(0,0,0,0.65); box-shadow: 0 0 0 2px rgba(255,255,255,0.45); }
+.colour-dot.yellow       { background: #f9df6d; }
+.colour-dot.green        { background: #a0c35a; }
+.colour-dot.blue         { background: #b0c4ef; }
+.colour-dot.purple       { background: #ba81c5; }
 
 .card-note-area { display: none; margin-top: 8px; }
 .word-card.note-open .card-note-area { display: block; }
@@ -664,8 +688,38 @@ function createCard(word) {
   label.className   = 'card-label';
   label.textContent = word;
 
+  const noteBtn = document.createElement('button');
+  noteBtn.className   = `card-btn note-btn${noteText ? ' has-note' : ''}${noteOpen ? ' active' : ''}`;
+  noteBtn.textContent = '✎';
+  noteBtn.title       = 'Toggle notes';
+  noteBtn.setAttribute('draggable', 'false');
+
+  main.appendChild(label);
+  main.appendChild(noteBtn);
+
+  // Colour selector row
+  const coloursRow = document.createElement('div');
+  coloursRow.className = 'card-colours';
+  for (const g of GROUPS) {
+    const dot = document.createElement('button');
+    dot.className = `colour-dot ${g}${group === g ? ' active' : ''}`;
+    dot.title = GROUP_NAMES[g];
+    dot.setAttribute('draggable', 'false');
+    dot.addEventListener('click', e => {
+      e.stopPropagation();
+      if (state.assignments[word] === g) {
+        delete state.assignments[word];
+        saveState();
+        renderBoard();
+      } else {
+        assignGroup(word, g);
+      }
+    });
+    coloursRow.appendChild(dot);
+  }
+
   const clearBtn = document.createElement('button');
-  clearBtn.className   = 'card-btn clear-btn';
+  clearBtn.className   = `card-btn clear-btn${group ? '' : ' hidden'}`;
   clearBtn.textContent = '✕';
   clearBtn.title       = 'Remove from group';
   clearBtn.setAttribute('draggable', 'false');
@@ -675,16 +729,7 @@ function createCard(word) {
     saveState();
     renderBoard();
   });
-
-  const noteBtn = document.createElement('button');
-  noteBtn.className   = `card-btn note-btn${noteText ? ' has-note' : ''}${noteOpen ? ' active' : ''}`;
-  noteBtn.textContent = '✎';
-  noteBtn.title       = 'Toggle notes';
-  noteBtn.setAttribute('draggable', 'false');
-
-  main.appendChild(label);
-  main.appendChild(clearBtn);
-  main.appendChild(noteBtn);
+  coloursRow.appendChild(clearBtn);
 
   const noteArea = document.createElement('div');
   noteArea.className = 'card-note-area';
@@ -696,6 +741,7 @@ function createCard(word) {
   textarea.setAttribute('draggable', 'false');
 
   noteArea.appendChild(textarea);
+  card.appendChild(coloursRow);
   card.appendChild(main);
   card.appendChild(noteArea);
 
@@ -717,12 +763,6 @@ function createCard(word) {
     state.notes[word] = textarea.value;
     noteBtn.classList.toggle('has-note', !!textarea.value.trim());
     saveState();
-  });
-
-  // Card click → cycle group
-  card.addEventListener('click', e => {
-    if (e.target === textarea || e.target === noteBtn) return;
-    cycleGroup(word);
   });
 
   // Drag source
@@ -761,30 +801,6 @@ function createCard(word) {
   return card;
 }
 
-function cycleGroup(word) {
-  const current = state.assignments[word] || null;
-  const curIdx  = current ? GROUPS.indexOf(current) : -1;
-
-  // Temporarily remove so countGroup reflects available slots
-  if (current) delete state.assignments[word];
-
-  // Walk forward from next position; skip full groups (with shake feedback)
-  let assigned = false;
-  for (let i = curIdx + 1; i < GROUPS.length; i++) {
-    const g = GROUPS[i];
-    if (countGroup(g) < 4) {
-      state.assignments[word] = g;
-      assigned = true;
-      break;
-    }
-    shakeEl(`badge-${g}`);
-  }
-  // If nothing found: stays unassigned (already deleted above)
-
-  saveState();
-  renderBoard();
-  if (allAssigned()) { renderSolved(); showPhase('solved'); }
-}
 
 function assignGroup(word, group) {
   const alreadyThere = state.assignments[word] === group;
