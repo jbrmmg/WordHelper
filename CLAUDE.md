@@ -4,9 +4,11 @@ A Flask web application for solving word-based puzzles (primarily Wordle-style 5
 
 ## Project Structure
 
-- `app.py` — Flask app; loads `words.txt` at startup, serves the UI, and handles the `/evaluate` POST endpoint
+- `app.py` — Flask app; queries the SQLite word database, serves the UI, and handles the `/evaluate` POST endpoint
 - `templates/index.html` — Single-page UI (plain HTML/CSS/JS, no framework)
-- `words.txt` — ~16k five-letter words used as the dictionary
+- `words.txt` — supplementary word list (can be imported into the database via `import_words.py`)
+- `import_words.py` — populates `/var/lib/wordhelper/words.db` from a word list file
+- `WORD_DB.md` — documents the database schema and import process
 - `requirements.txt` — Python dependencies (Flask, Gunicorn)
 - `pom.xml` — Maven config for packaging and release (not Python-specific)
 
@@ -26,9 +28,11 @@ The `.venv` directory contains the virtual environment. Activate it with:
 source .venv/bin/activate
 ```
 
-## How the Backend Works
+## Word Database
 
-`load_words()` reads `words.txt` at startup, filters to 5-letter words, and builds a letter-frequency ordering used to sort the UI's letter cards.
+The app queries a SQLite database at `/var/lib/wordhelper/words.db`. The `words` table has one row per word with pre-computed columns (`pos1`–`pos5`, `letter_set`, `has_repeated`, `is_proper`, `has_special`, `is_ascii`, `source`) that enable efficient puzzle filtering. See `WORD_DB.md` for the full schema and import instructions.
+
+## How the Backend Works
 
 `check_word()` filters candidate words against four constraints:
 - `excluded` — letters that must not appear
