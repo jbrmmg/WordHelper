@@ -24,6 +24,13 @@ services:
     networks:
       - jbr-network
 
+  codeword:
+    image: nexus.jbrmmg.me.uk:8084/codeword:latest
+    container_name: codeword
+    restart: unless-stopped
+    networks:
+      - jbr-network
+
 networks:
   jbr-network:
     external: true

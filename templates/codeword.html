@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codeword Helper</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    padding: 14px;
+  }
+
+  h1 {
+    text-align: center;
+    color: #a0d4f5;
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+
+  /* ── Upload ── */
+  .upload-card {
+    background: #16213e;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  #drop-zone {
+    border: 2px dashed #2196f3;
+    border-radius: 8px;
+    padding: 38px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #888;
+  }
+
+  #drop-zone:hover, #drop-zone.over {
+    border-color: #a0d4f5;
+    background: #0f3460;
+    color: #eee;
+  }
+
+  #drop-zone .dz-icon { font-size: 2.8rem; line-height: 1; margin-bottom: 10px; }
+  #drop-zone .dz-main { font-size: 15px; font-weight: bold; }
+  #drop-zone .dz-hint { font-size: 12px; margin-top: 6px; color: #555; }
+
+  #file-input { display: none; }
+
+  .error-box {
+    display: none;
+    background: #3e1a1a;
+    border: 1px solid #c62828;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #ff8a80;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+
+  /* ── Loading ── */
+  #loading {
+    display: none;
+    text-align: center;
+    padding: 28px;
+    color: #a0d4f5;
+    font-size: 14px;
+  }
+
+  .spinner {
+    width: 42px; height: 42px;
+    border: 3px solid #16213e;
+    border-top-color: #2196f3;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Results ── */
+  #results { display: none; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .stat {
+    background: #16213e;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    border-top: 2px solid #2196f3;
+  }
+
+  .stat-val { font-size: 1.9rem; font-weight: 700; color: #a0d4f5; }
+  .stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #666; margin-top: 3px; }
+
+  /* ── Image cards ── */
+  .images-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .img-card { background: #16213e; border-radius: 10px; overflow: hidden; }
+
+  .card-hdr {
+    background: #0f3460;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #a0d4f5;
+  }
+
+  .card-body { padding: 10px; }
+
+  .img-card img { width: 100%; height: auto; display: block; border-radius: 4px; }
+
+  /* ── Frequency table ── */
+  .freq-card { background: #16213e; border-radius: 10px; overflow: hidden; }
+
+  table.freq { width: 100%; border-collapse: collapse; }
+
+  table.freq th {
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #555;
+    background: #111827;
+    border-bottom: 1px solid #1e2a5a;
+    white-space: nowrap;
+  }
+
+  table.freq td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #1a2340;
+    vertical-align: middle;
+  }
+
+  table.freq tr:last-child td { border-bottom: none; }
+  table.freq tr:hover td { background: #1e2a4a; }
+
+  .num-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px; height: 34px;
+    background: #a0d4f5;
+    color: #1a1a2e;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .bar-bg { flex: 1; height: 8px; background: #0f3460; border-radius: 4px; overflow: hidden; min-width: 80px; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #1976d2, #64b5f6); border-radius: 4px; }
+  .bar-pct { font-size: 12px; color: #777; min-width: 44px; text-align: right; }
+
+  .hint-letter {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 16px;
+    color: #4caf50;
+    background: #1b3620;
+    border: 1px solid #2e7d32;
+    padding: 3px 10px;
+    border-radius: 4px;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  .guess-input {
+    width: 42px; height: 34px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #0f3460;
+    border: 2px solid #2196f3;
+    border-radius: 6px;
+    color: #a0d4f5;
+    transition: all 0.15s;
+  }
+
+  .guess-input:focus { outline: none; border-color: #64b5f6; }
+
+  .guess-input.set {
+    border-color: #4caf50;
+    background: #1b3620;
+    color: #4caf50;
+  }
+</style>
+</head>
+<body>
+
+<h1>&#9726; Codeword Helper</h1>
+<p class="subtitle">Upload your codeword puzzle screenshot to analyse number frequencies</p>
+
+<div class="upload-card">
+  <div id="drop-zone">
+    <div class="dz-icon">&#128247;</div>
+    <div class="dz-main">Drop your screenshot here &mdash; or click to browse</div>
+    <div class="dz-hint">PNG &bull; JPG &bull; GIF &bull; numbers change each puzzle so one image is enough</div>
+  </div>
+  <input type="file" id="file-input" accept="image/*">
+  <div class="error-box" id="error-box"></div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Analysing puzzle&hellip;</p>
+</div>
+
+<div id="results">
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val" id="s-grid">-</div>
+      <div class="stat-lbl">Grid Size</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="s-active">-</div>
+      <div class="stat-lbl">Active Cells</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="s-nums">-</div>
+      <div class="stat-lbl">Numbers Found</div>
+    </div>
+  </div>
+
+  <div class="images-row">
+    <div class="img-card">
+      <div class="card-hdr">Original Puzzle</div>
+      <div class="card-body"><img id="orig-img" src="" alt="Uploaded puzzle"></div>
+    </div>
+    <div class="img-card">
+      <div class="card-hdr">Detected Grid</div>
+      <div class="card-body"><img id="grid-img" src="" alt="Detected grid structure"></div>
+    </div>
+  </div>
+
+  <div class="freq-card">
+    <div class="card-hdr">Frequency Analysis &mdash; sorted by count &mdash; likely letter based on English frequency</div>
+    <table class="freq">
+      <thead>
+        <tr>
+          <th>Number</th>
+          <th>Count</th>
+          <th>Relative frequency</th>
+          <th>% of cells</th>
+          <th>Likely letter</th>
+          <th>Your guess</th>
+        </tr>
+      </thead>
+      <tbody id="freq-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const loading   = document.getElementById('loading');
+const results   = document.getElementById('results');
+const errBox    = document.getElementById('error-box');
+const origImg   = document.getElementById('orig-img');
+const gridImg   = document.getElementById('grid-img');
+const freqBody  = document.getElementById('freq-body');
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+['dragover', 'dragenter'].forEach(ev =>
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); })
+);
+['dragleave', 'dragend'].forEach(ev =>
+  dropZone.addEventListener(ev, () => dropZone.classList.remove('over'))
+);
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) upload(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) upload(fileInput.files[0]);
+});
+
+function upload(file) {
+  // Show original image immediately from local file
+  const reader = new FileReader();
+  reader.onload = e => { origImg.src = e.target.result; };
+  reader.readAsDataURL(file);
+
+  results.style.display = 'none';
+  loading.style.display = 'block';
+  errBox.style.display  = 'none';
+
+  const fd = new FormData();
+  fd.append('image', file);
+
+  fetch('/analyze', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      loading.style.display = 'none';
+      if (data.error) { showError(data.error); return; }
+      render(data);
+    })
+    .catch(e => { loading.style.display = 'none'; showError(e.message); });
+}
+
+function showError(msg) {
+  errBox.textContent = '⚠ ' + msg;
+  errBox.style.display = 'block';
+}
+
+function render(data) {
+  gridImg.src = 'data:image/png;base64,' + data.grid_image;
+
+  document.getElementById('s-grid').textContent   = data.stats.n_rows + '×' + data.stats.n_cols;
+  document.getElementById('s-active').textContent = data.stats.total_active;
+  document.getElementById('s-nums').textContent   = data.stats.numbers_found;
+
+  const maxCount = data.frequency.length ? data.frequency[0].count : 1;
+  freqBody.innerHTML = '';
+
+  data.frequency.forEach(item => {
+    const barPct = Math.round((item.count / maxCount) * 100);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="num-badge">${item.number}</span></td>
+      <td>${item.count}</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-bg"><div class="bar-fill" style="width:${barPct}%"></div></div>
+        </div>
+      </td>
+      <td class="bar-pct" style="min-width:0;text-align:left;color:#888">${item.percentage}%</td>
+      <td><span class="hint-letter">${item.letter_hint}</span></td>
+      <td>
+        <input class="guess-input" type="text" maxlength="1" placeholder="?"
+          data-n="${item.number}"
+          oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');
+                   this.classList.toggle('set',this.value.length>0)">
+      </td>`;
+    freqBody.appendChild(tr);
+  });
+
+  results.style.display = 'block';
+}
+</script>
+</body>
+</html>

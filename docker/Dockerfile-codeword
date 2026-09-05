@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tesseract-ocr fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-codeword.txt .
+RUN pip install --no-cache-dir -r requirements-codeword.txt
+
+COPY codeword.py ./
+COPY templates/ templates/
+COPY static/ static/
+
+EXPOSE 8080
+
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "codeword:app"]

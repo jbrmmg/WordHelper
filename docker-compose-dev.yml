@@ -30,6 +30,15 @@ services:
         aliases:
           - connections
 
+  codeword-dev:
+    image: nexus.jbrmmg.me.uk:8084/codeword-dev:latest
+    container_name: codeword-dev
+    restart: unless-stopped
+    networks:
+      jbr-network:
+        aliases:
+          - codeword
+
 networks:
   jbr-network:
     external: true

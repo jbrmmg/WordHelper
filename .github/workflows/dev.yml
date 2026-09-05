@@ -39,6 +39,14 @@ jobs:
             -t nexus.jbrmmg.me.uk:8083/connections-dev:latest \
             .
 
+      - name: Build codeword Docker image
+        run: |
+          docker build \
+            -f docker/Dockerfile-codeword \
+            -t nexus.jbrmmg.me.uk:8083/codeword-dev:${{ github.sha }} \
+            -t nexus.jbrmmg.me.uk:8083/codeword-dev:latest \
+            .
+
       - name: Push to Nexus Docker registry
         run: |
           docker login nexus.jbrmmg.me.uk:8083 \
@@ -50,6 +58,8 @@ jobs:
           docker push nexus.jbrmmg.me.uk:8083/wordclue-dev:latest
           docker push nexus.jbrmmg.me.uk:8083/connections-dev:${{ github.sha }}
           docker push nexus.jbrmmg.me.uk:8083/connections-dev:latest
+          docker push nexus.jbrmmg.me.uk:8083/codeword-dev:${{ github.sha }}
+          docker push nexus.jbrmmg.me.uk:8083/codeword-dev:latest
 
       - name: Deploy
         run: |
