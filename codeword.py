@@ -1,19 +1,17 @@
 import io
-import re
 import base64
 import traceback
 from collections import Counter
 
 import cv2
 import numpy as np
-import pytesseract
 from PIL import Image, ImageDraw, ImageFont
 from flask import Flask, render_template, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_prefix=1)
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
 ENGLISH_FREQ_ORDER = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'
 
@@ -33,139 +31,186 @@ def _load_font(size=13):
     return ImageFont.load_default()
 
 
-def _detect_lines_at(gray, thr):
-    """Detect horizontal/vertical grid line positions using morphological opening."""
-    h, w = gray.shape
-    _, inv = cv2.threshold(gray, thr, 255, cv2.THRESH_BINARY_INV)
+# ── Grid detection ────────────────────────────────────────────────────────────
 
-    # A grid line spans (almost) the full width/height; dark cells do not.
-    h_mask = cv2.morphologyEx(inv, cv2.MORPH_OPEN,
-                              cv2.getStructuringElement(cv2.MORPH_RECT, (w // 4, 1)))
-    v_mask = cv2.morphologyEx(inv, cv2.MORPH_OPEN,
-                              cv2.getStructuringElement(cv2.MORPH_RECT, (1, h // 4)))
+def find_grid_bounds(gray):
+    """Find the outer extent of the grid by locating any very dark pixel."""
+    very_dark = gray < 60
+    row_has_dark = np.any(very_dark, axis=1)
+    col_has_dark = np.any(very_dark, axis=0)
 
-    def band_centers(mask, axis):
-        profile = np.any(mask > 0, axis=axis)
-        centers, in_band, start = [], False, 0
-        for i, active in enumerate(profile):
-            if active and not in_band:
-                start, in_band = i, True
-            elif not active and in_band:
-                centers.append((start + i) // 2)
-                in_band = False
-        if in_band:
-            centers.append((start + len(profile)) // 2)
-        return centers
+    if not np.any(row_has_dark) or not np.any(col_has_dark):
+        h, w = gray.shape
+        return 0, h - 1, 0, w - 1
 
-    return band_centers(h_mask, axis=1), band_centers(v_mask, axis=0)
+    top    = int(np.argmax(row_has_dark))
+    bottom = int(gray.shape[0] - 1 - np.argmax(row_has_dark[::-1]))
+    left   = int(np.argmax(col_has_dark))
+    right  = int(gray.shape[1] - 1 - np.argmax(col_has_dark[::-1]))
+    return top, bottom, left, right
 
 
-def find_grid_lines(gray):
-    """Try progressively higher thresholds; fall back to a 13×13 estimate."""
-    h, w = gray.shape
-    for thr in (70, 100, 130):
-        hl, vl = _detect_lines_at(gray, thr)
-        if len(hl) >= 4 and len(vl) >= 4:
-            return hl, vl
-    mg = min(h, w) // 60
-    n = 13
-    return (
-        [mg + i * (h - 2 * mg) // n for i in range(n + 1)],
-        [mg + i * (w - 2 * mg) // n for i in range(n + 1)],
-    )
-
-
-def is_dark_cell(gray, y0, y1, x0, x1, pad=4):
+def classify_cell(gray, y0, y1, x0, x1, pad=4):
+    """Return True if the cell interior is dark (blocked square)."""
     inner = gray[y0 + pad:y1 - pad, x0 + pad:x1 - pad]
     return inner.size == 0 or float(np.mean(inner)) < 160
 
 
-def ocr_number(gray, y0, y1, x0, x1, pad=3):
-    """Read the small number from the top-left corner of a white cell."""
-    ch = y1 - y0 - 2 * pad
-    cw = x1 - x0 - 2 * pad
-    if ch <= 0 or cw <= 0:
-        return None
+# ── Visual pattern fingerprinting ─────────────────────────────────────────────
 
-    roi = gray[
-        y0 + pad: y0 + pad + max(1, int(ch * 0.48)),
-        x0 + pad: x0 + pad + max(1, int(cw * 0.58)),
-    ]
-    if roi.size == 0:
-        return None
+PATTERN_SIZE = 32   # pixels square for comparison image
 
-    scale = max(3, 80 // min(roi.shape))
-    big = cv2.resize(roi, (roi.shape[1] * scale, roi.shape[0] * scale),
-                     interpolation=cv2.INTER_CUBIC)
-    _, thresh = cv2.threshold(big, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    padded = cv2.copyMakeBorder(thresh, 10, 10, 10, 10,
-                                cv2.BORDER_CONSTANT, value=255)
 
-    for psm in (7, 8, 6):
-        txt = pytesseract.image_to_string(
-            padded,
-            config=f'--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789',
-        ).strip()
-        for m in re.findall(r'\d+', txt):
-            n = int(m)
-            if 1 <= n <= 26:
-                return n
-    return None
+def extract_corner(gray, y0, y1, x0, x1, pad=3):
+    """Crop the top-left corner of a white cell (where the number lives)."""
+    h = y1 - y0
+    w = x1 - x0
+    roi_h = max(4, int(h * 0.50) - pad)
+    roi_w = max(4, int(w * 0.58) - pad)
+    return gray[y0 + pad: y0 + pad + roi_h,
+                x0 + pad: x0 + pad + roi_w]
 
+
+def normalise_corner(crop):
+    """
+    Resize to PATTERN_SIZE x PATTERN_SIZE, threshold, and return a float32 array.
+    The number pixels are made *dark* (0.0) on a white background (1.0).
+    """
+    resized = cv2.resize(crop, (PATTERN_SIZE, PATTERN_SIZE),
+                         interpolation=cv2.INTER_AREA)
+    _, binary = cv2.threshold(resized, 150, 255, cv2.THRESH_BINARY)
+    # Normalise: 1.0 = white background, 0.0 = dark digit pixel
+    return binary.astype(np.float32) / 255.0
+
+
+def cluster_patterns(patterns, mse_thr=0.02):
+    """
+    Greedy centroid clustering by MSE on binary corner images.
+    Returns (cluster_id_for_each_pattern, [centroid_array, ...])
+    """
+    centroids = []   # running-mean float32 flat arrays
+    counts    = []   # how many in each cluster
+    assigned  = []   # cluster id for each pattern
+
+    for flat in patterns:
+        best_k, best_mse = -1, float('inf')
+        for k, c in enumerate(centroids):
+            mse = float(np.mean((flat - c) ** 2))
+            if mse < best_mse:
+                best_mse, best_k = mse, k
+
+        if best_k >= 0 and best_mse <= mse_thr:
+            # Welford-style running mean
+            n = counts[best_k] + 1
+            centroids[best_k] += (flat - centroids[best_k]) / n
+            counts[best_k] = n
+            assigned.append(best_k)
+        else:
+            centroids.append(flat.copy())
+            counts.append(1)
+            assigned.append(len(centroids) - 1)
+
+    return assigned, centroids
+
+
+def centroid_to_png_b64(centroid_flat, scale=3):
+    """Render a cluster centroid as a small base64-encoded PNG thumbnail."""
+    img_arr = (centroid_flat.reshape(PATTERN_SIZE, PATTERN_SIZE) * 255).astype(np.uint8)
+    # Upscale for display
+    big = cv2.resize(img_arr, (PATTERN_SIZE * scale, PATTERN_SIZE * scale),
+                     interpolation=cv2.INTER_NEAREST)
+    pil_img = Image.fromarray(big, mode='L')
+    buf = io.BytesIO()
+    pil_img.save(buf, 'PNG')
+    buf.seek(0)
+    return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+
+# ── Main analysis pipeline ────────────────────────────────────────────────────
 
 def analyze_image(image_bytes):
     nparr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img   = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise ValueError('Cannot decode image — please upload a valid PNG or JPG.')
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    hl, vl = find_grid_lines(gray)
-    n_rows, n_cols = len(hl) - 1, len(vl) - 1
+    top, bottom, left, right = find_grid_bounds(gray)
 
-    freq = Counter()
-    grid = []
-    for r in range(n_rows):
+    # Determine grid size (try 13; could support other sizes later)
+    n = 13
+    cell_h = (bottom - top) / n
+    cell_w = (right - left) / n
+
+    # Build grid
+    grid = []        # list of rows; each cell: {'type','cluster_id','corner'}
+    patterns  = []   # flat normalised pattern for each light cell, in order
+    positions = []   # (r, c) for each light cell, in same order
+
+    for r in range(n):
         row = []
-        y0, y1 = hl[r], hl[r + 1]
-        for c in range(n_cols):
-            x0, x1 = vl[c], vl[c + 1]
-            if is_dark_cell(gray, y0, y1, x0, x1):
-                row.append({'type': 'dark', 'number': None})
+        y0 = int(top + r * cell_h)
+        y1 = int(top + (r + 1) * cell_h)
+        for c in range(n):
+            x0 = int(left + c * cell_w)
+            x1 = int(left + (c + 1) * cell_w)
+            if classify_cell(gray, y0, y1, x0, x1):
+                row.append({'type': 'dark', 'cluster_id': -1})
             else:
-                num = ocr_number(gray, y0, y1, x0, x1)
-                if num:
-                    freq[num] += 1
-                row.append({'type': 'light', 'number': num})
+                corner = extract_corner(gray, y0, y1, x0, x1)
+                flat   = normalise_corner(corner).flatten()
+                patterns.append(flat)
+                positions.append((r, c))
+                row.append({'type': 'light', 'cluster_id': None})
         grid.append(row)
 
-    return grid, freq, n_rows, n_cols
+    if not patterns:
+        raise ValueError('No white cells found — check that the image is a codeword puzzle.')
+
+    assigned, centroids = cluster_patterns(patterns)
+
+    # Write cluster IDs back into grid
+    for idx, (r, c) in enumerate(positions):
+        grid[r][c]['cluster_id'] = assigned[idx]
+
+    # Count cluster frequencies
+    freq = Counter(assigned)
+
+    return grid, freq, centroids, n
 
 
-def render_grid(grid, n_rows, n_cols, cell=44):
-    b = 1
+# ── Visualisation ─────────────────────────────────────────────────────────────
+
+def render_grid(grid, n_rows, n_cols, freq, cell=44):
+    """Render detected grid; label each white cell with its frequency rank."""
+    # Rank clusters: 1 = most frequent
+    rank_of = {cid: rank + 1
+               for rank, (cid, _) in enumerate(freq.most_common())}
+
+    b  = 1
     im = Image.new('RGB', (n_cols * cell + b, n_rows * cell + b), '#222222')
-    draw = ImageDraw.Draw(im)
-    font = _load_font(13)
+    dr = ImageDraw.Draw(im)
+    fn = _load_font(13)
 
     for r, row in enumerate(grid):
         for c, cd in enumerate(row):
             x, y = c * cell + b, r * cell + b
             if cd['type'] == 'dark':
-                draw.rectangle([x, y, x + cell - b, y + cell - b], fill='#555555')
+                dr.rectangle([x, y, x + cell - b, y + cell - b], fill='#555555')
             else:
-                draw.rectangle([x, y, x + cell - b, y + cell - b], fill='white')
-                num = cd['number']
-                if num is not None:
-                    draw.text((x + 3, y + 2), str(num), fill='#1a237e', font=font)
-                else:
-                    draw.text((x + 3, y + 2), '?', fill='#cc0000', font=font)
+                dr.rectangle([x, y, x + cell - b, y + cell - b], fill='white')
+                cid = cd['cluster_id']
+                if cid is not None and cid in rank_of:
+                    dr.text((x + 3, y + 2), str(rank_of[cid]),
+                            fill='#1a237e', font=fn)
 
     buf = io.BytesIO()
     im.save(buf, 'PNG')
     buf.seek(0)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
+
+# ── Flask routes ──────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -178,27 +223,30 @@ def analyze():
         return jsonify({'error': 'No image uploaded'}), 400
     try:
         image_bytes = request.files['image'].read()
-        grid, freq, n_rows, n_cols = analyze_image(image_bytes)
-        grid_b64 = render_grid(grid, n_rows, n_cols)
+        grid, freq, centroids, n = analyze_image(image_bytes)
+
+        grid_b64 = render_grid(grid, n, n, freq)
 
         total = sum(freq.values())
         freq_list = []
-        for rank, (num, count) in enumerate(sorted(freq.items(), key=lambda x: -x[1])):
+        for rank, (cid, count) in enumerate(freq.most_common()):
             freq_list.append({
-                'number': num,
-                'count': count,
-                'percentage': round(100 * count / total, 1) if total else 0,
+                'rank':        rank + 1,
+                'cluster_id':  cid,
+                'count':       count,
+                'percentage':  round(100 * count / total, 1) if total else 0,
                 'letter_hint': ENGLISH_FREQ_ORDER[rank] if rank < 26 else '?',
+                'thumbnail':   centroid_to_png_b64(centroids[cid]),
             })
 
         return jsonify({
             'grid_image': grid_b64,
-            'frequency': freq_list,
+            'frequency':  freq_list,
             'stats': {
-                'n_rows': n_rows,
-                'n_cols': n_cols,
-                'total_active': total,
-                'numbers_found': len(freq),
+                'n_rows':         n,
+                'n_cols':         n,
+                'total_active':   total,
+                'patterns_found': len(freq),
             },
         })
     except Exception as e:
