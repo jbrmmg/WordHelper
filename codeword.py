@@ -126,6 +126,48 @@ def centroid_to_png_b64(centroid_flat, scale=3):
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
 
+# ── Grid size detection ───────────────────────────────────────────────────────
+
+def detect_grid_size(gray, top, bottom, left, right, candidates=(13, 14, 15)):
+    """
+    Score each candidate grid size by how well its cell boundaries align with
+    the thin dark grid lines in the image.  The correct n maximises the average
+    inverse-brightness at boundary positions.
+    """
+    inv = 255.0 - gray[top:bottom + 1, left:right + 1].astype(np.float32)
+    grid_h = bottom - top
+    grid_w = right - left
+
+    best_n, best_score = candidates[0], -1.0
+
+    for n in candidates:
+        cell_h = grid_h / n
+        cell_w = grid_w / n
+        score  = 0.0
+
+        for i in range(n + 1):
+            y = round(i * cell_h)
+            for dy in (-1, 0, 1):
+                yy = y + dy
+                if 0 <= yy < inv.shape[0]:
+                    score += float(inv[yy, :].mean())
+
+            x = round(i * cell_w)
+            for dx in (-1, 0, 1):
+                xx = x + dx
+                if 0 <= xx < inv.shape[1]:
+                    score += float(inv[:, xx].mean())
+
+        # Normalise so that more lines don't automatically win
+        score /= (n + 1)
+
+        if score > best_score:
+            best_score = score
+            best_n = n
+
+    return best_n
+
+
 # ── Main analysis pipeline ────────────────────────────────────────────────────
 
 def analyze_image(image_bytes):
@@ -137,8 +179,7 @@ def analyze_image(image_bytes):
 
     top, bottom, left, right = find_grid_bounds(gray)
 
-    # Determine grid size (try 13; could support other sizes later)
-    n = 13
+    n = detect_grid_size(gray, top, bottom, left, right)
     cell_h = (bottom - top) / n
     cell_w = (right - left) / n
 
@@ -239,8 +280,16 @@ def analyze():
                 'thumbnail':   centroid_to_png_b64(centroids[cid]),
             })
 
+        cells = [
+            {'r': r, 'c': c, 'cluster_id': grid[r][c]['cluster_id']}
+            for r in range(n)
+            for c in range(n)
+            if grid[r][c]['type'] == 'light'
+        ]
+
         return jsonify({
             'grid_image': grid_b64,
+            'cells':      cells,
             'frequency':  freq_list,
             'stats': {
                 'n_rows':         n,

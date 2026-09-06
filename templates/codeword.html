@@ -60,88 +60,215 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Wizard ── */
+  #wizard { display: none; }
+
+  .wiz-card {
+    background: #16213e;
+    border-radius: 10px;
+    padding: 24px;
+    margin: 0 auto 16px;
+    max-width: 460px;
+  }
+
+  .wiz-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .wiz-step-lbl { color: #a0d4f5; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .wiz-bar-bg { flex: 1; height: 6px; background: #0f3460; border-radius: 3px; overflow: hidden; }
+  .wiz-bar-fill { height: 100%; background: linear-gradient(90deg, #1976d2, #64b5f6); border-radius: 3px; transition: width 0.3s ease; }
+  .wiz-pct-lbl { color: #555; font-size: 12px; white-space: nowrap; min-width: 32px; text-align: right; }
+
+  .wiz-thumb-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #2196f3;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 18px;
+  }
+  .wiz-thumb-box img { width: 150px; height: 150px; image-rendering: pixelated; }
+
+  .wiz-info { text-align: center; margin-bottom: 18px; }
+  .wiz-count { font-size: 20px; font-weight: 700; color: #a0d4f5; }
+  .wiz-pct-txt { font-size: 12px; color: #666; margin-top: 4px; }
+
+  .wiz-prompt { text-align: center; font-size: 14px; color: #aaa; margin-bottom: 14px; }
+
+  /* ── Number buttons (shared by wizard and popup) ── */
+  .num-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 7px;
+    margin-bottom: 20px;
+  }
+  .num-btn {
+    padding: 9px 0;
+    background: #0f3460;
+    border: 2px solid #1976d2;
+    border-radius: 6px;
+    color: #a0d4f5;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .num-btn:hover  { background: #1e4a8a; border-color: #64b5f6; color: white; }
+  .num-btn.assigned { background: #0a2e2e; border-color: #00897b; color: #4db6ac; }
+  .num-btn.assigned:hover { background: #0d3d3d; border-color: #26a69a; color: #80cbc4; }
+  .num-btn.active { background: #1b5e20; border-color: #4caf50; color: #81c784; }
+  .num-btn.active:hover { background: #2e7d32; border-color: #66bb6a; }
+
+  .wiz-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .wiz-btn { padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .wiz-btn-back   { background: #16213e; color: #666; border: 1px solid #222; }
+  .wiz-btn-back:hover:not(:disabled) { color: #aaa; background: #1e2a4a; }
+  .wiz-btn-back:disabled { opacity: 0.3; cursor: default; }
+  .wiz-btn-finish { background: #0f3460; color: #a0d4f5; border: 1px solid #1976d2; }
+  .wiz-btn-finish:hover { background: #1976d2; color: white; }
+  .wiz-btn-skip   { background: #16213e; color: #888; border: 1px solid #1a2a4a; }
+  .wiz-btn-skip:hover { background: #1e2a4a; color: #aaa; }
+
+  /* ── Cell-correction popup ── */
+  #cell-popup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    background: #0f1e38;
+    border: 1px solid #2196f3;
+    border-radius: 10px;
+    padding: 14px;
+    width: 330px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .popup-hdr {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .popup-thumb {
+    width: 56px; height: 56px;
+    image-rendering: pixelated;
+    border: 1px solid #2196f3;
+    border-radius: 4px;
+    background: white;
+    flex-shrink: 0;
+  }
+  .popup-title { font-size: 14px; font-weight: 700; color: #a0d4f5; }
+  .popup-sub   { font-size: 12px; color: #666; margin-top: 2px; }
+  .popup-close {
+    margin-left: auto;
+    background: none; border: none;
+    color: #555; font-size: 18px; cursor: pointer; line-height: 1;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .popup-close:hover { color: #aaa; background: #1a2a4a; }
+  .popup-prompt { font-size: 13px; color: #aaa; margin-bottom: 10px; }
+  .popup-num-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .popup-num-grid .num-btn { padding: 7px 0; font-size: 13px; }
+  .popup-footer { display: flex; justify-content: flex-end; }
+  .popup-clear-btn {
+    padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 12px;
+    background: #1a1a2e; color: #888; border: 1px solid #333;
+  }
+  .popup-clear-btn:hover { color: #ff8a80; border-color: #c62828; }
+
   /* ── Results ── */
   #results { display: none; }
+
+  .results-hdr { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 14px; }
+  .results-hdr button {
+    padding: 7px 14px; background: #0f3460; border: 1px solid #1976d2;
+    border-radius: 6px; color: #a0d4f5; font-size: 12px; cursor: pointer;
+  }
+  .results-hdr button:hover { background: #1976d2; color: white; }
 
   .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
   .stat { background: #16213e; border-radius: 8px; padding: 14px; text-align: center; border-top: 2px solid #2196f3; }
   .stat-val { font-size: 1.9rem; font-weight: 700; color: #a0d4f5; }
   .stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #666; margin-top: 3px; }
 
-  /* ── Images ── */
-  .images-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .images-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 auto 14px; max-width: 75%; }
   .img-card { background: #16213e; border-radius: 10px; overflow: hidden; }
   .card-hdr { background: #0f3460; padding: 9px 14px; font-size: 13px; font-weight: bold; color: #a0d4f5; }
   .card-body { padding: 10px; }
   .img-card img { width: 100%; height: auto; display: block; border-radius: 4px; }
+  /* canvas inside card: same rules as img */
+  #grid-canvas { width: 100%; height: auto; display: block; border-radius: 4px; cursor: crosshair; }
 
-  /* ── Frequency table ── */
   .freq-card { background: #16213e; border-radius: 10px; overflow: hidden; }
   table.freq { width: 100%; border-collapse: collapse; }
   table.freq th {
-    padding: 9px 14px;
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    color: #555;
-    background: #111827;
-    border-bottom: 1px solid #1e2a5a;
-    white-space: nowrap;
+    padding: 9px 14px; text-align: left; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    color: #555; background: #111827;
+    border-bottom: 1px solid #1e2a5a; white-space: nowrap;
   }
-  table.freq td { padding: 9px 14px; border-bottom: 1px solid #1a2340; vertical-align: middle; }
+  table.freq th.sortable { cursor: pointer; user-select: none; }
+  table.freq th.sortable:hover { color: #a0d4f5; }
+  table.freq th.sort-active { color: #a0d4f5; }
+  .sort-arrow { margin-left: 4px; font-size: 10px; }
+  table.freq td { padding: 8px 14px; border-bottom: 1px solid #1a2340; vertical-align: middle; }
   table.freq tr:last-child td { border-bottom: none; }
   table.freq tr:hover td { background: #1e2a4a; }
+  table.freq tr.unid-first td { border-top: 2px solid #2a1a1a; }
 
-  .rank-badge {
+  .code-badge {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px;
-    background: #a0d4f5; color: #1a1a2e;
-    border-radius: 6px; font-weight: 700; font-size: 14px;
+    min-width: 34px; height: 34px; padding: 0 8px;
+    background: #1565c0; color: white;
+    border-radius: 6px; font-weight: 700; font-size: 15px;
   }
+  .code-badge.unset { background: #1a2a4a; color: #444; font-size: 18px; }
 
+  .thumb-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
   .thumb {
-    width: 64px; height: 64px;
-    image-rendering: pixelated;
-    border: 1px solid #2196f3;
-    border-radius: 4px;
-    background: white;
+    width: 56px; height: 56px; image-rendering: pixelated;
+    border: 1px solid #2196f3; border-radius: 4px; background: white;
   }
 
   .bar-wrap { display: flex; align-items: center; gap: 10px; }
   .bar-bg { flex: 1; height: 8px; background: #0f3460; border-radius: 4px; overflow: hidden; min-width: 80px; }
   .bar-fill { height: 100%; background: linear-gradient(90deg, #1976d2, #64b5f6); border-radius: 4px; }
-  .bar-pct { font-size: 12px; color: #777; min-width: 44px; text-align: right; }
 
   .hint-letter {
-    display: inline-block;
-    font-weight: 700; font-size: 16px;
-    color: #4caf50; background: #1b3620;
-    border: 1px solid #2e7d32;
-    padding: 3px 10px; border-radius: 4px;
-    min-width: 36px; text-align: center;
+    display: inline-block; font-weight: 700; font-size: 16px;
+    color: #4caf50; background: #1b3620; border: 1px solid #2e7d32;
+    padding: 3px 10px; border-radius: 4px; min-width: 36px; text-align: center;
   }
 
-  .guess-input {
-    width: 42px; height: 34px;
-    text-align: center; font-size: 14px; font-weight: 700; text-transform: uppercase;
+  .letter-input {
+    width: 42px; height: 34px; text-align: center; font-size: 16px;
+    font-weight: 700; text-transform: uppercase;
     background: #0f3460; border: 2px solid #2196f3;
     border-radius: 6px; color: #a0d4f5; transition: all 0.15s;
   }
-  .guess-input:focus { outline: none; border-color: #64b5f6; }
-  .guess-input.set { border-color: #4caf50; background: #1b3620; color: #4caf50; }
+  .letter-input:focus { outline: none; border-color: #64b5f6; }
+  .letter-input.set { border-color: #4caf50; background: #1b3620; color: #4caf50; }
 </style>
 </head>
 <body>
 
 <h1>&#9726; Codeword Helper</h1>
-<p class="subtitle">Upload your codeword puzzle screenshot &mdash; numbers are matched by visual pattern, no OCR needed</p>
+<p class="subtitle">Upload your codeword puzzle screenshot &mdash; then identify each number pattern</p>
 
 <div class="upload-card">
   <div id="drop-zone">
     <div class="dz-icon">&#128247;</div>
     <div class="dz-main">Drop your screenshot here &mdash; or click to browse</div>
-    <div class="dz-hint">PNG &bull; JPG &bull; GIF</div>
+    <div class="dz-hint">PNG &bull; JPG &bull; GIF &bull; or paste from clipboard (Ctrl+V)</div>
   </div>
   <input type="file" id="file-input" accept="image/*">
   <div class="error-box" id="error-box"></div>
@@ -152,7 +279,59 @@
   <p>Analysing puzzle&hellip;</p>
 </div>
 
+<!-- ── Wizard ── -->
+<div id="wizard">
+  <div class="wiz-card">
+    <div class="wiz-progress">
+      <span class="wiz-step-lbl" id="wiz-label">Pattern 1 of ?</span>
+      <div class="wiz-bar-bg"><div class="wiz-bar-fill" id="wiz-bar-fill" style="width:0%"></div></div>
+      <span class="wiz-pct-lbl" id="wiz-pct-lbl">0%</span>
+    </div>
+
+    <div class="wiz-thumb-box">
+      <img id="wiz-thumb" src="" alt="pattern thumbnail">
+    </div>
+
+    <div class="wiz-info">
+      <div class="wiz-count" id="wiz-count"></div>
+      <div class="wiz-pct-txt" id="wiz-pct-txt"></div>
+    </div>
+
+    <p class="wiz-prompt">Which number is this in your puzzle?</p>
+
+    <div class="num-grid" id="wiz-num-grid"></div>
+
+    <div class="wiz-nav">
+      <button class="wiz-btn wiz-btn-back" id="wiz-back-btn" onclick="wizBack()" disabled>&#8592; Back</button>
+      <button class="wiz-btn wiz-btn-finish" onclick="finishWizard()">View Results</button>
+      <button class="wiz-btn wiz-btn-skip" onclick="wizSkip()">Skip &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Cell-correction popup ── -->
+<div id="cell-popup">
+  <div class="popup-hdr">
+    <img class="popup-thumb" id="popup-thumb" src="" alt="">
+    <div>
+      <div class="popup-title" id="popup-title"></div>
+      <div class="popup-sub"   id="popup-sub"></div>
+    </div>
+    <button class="popup-close" onclick="closePopup()">&#x2715;</button>
+  </div>
+  <p class="popup-prompt">Assign this pattern to a code number:</p>
+  <div class="popup-num-grid" id="popup-num-grid"></div>
+  <div class="popup-footer">
+    <button class="popup-clear-btn" onclick="popupClear()">Clear assignment</button>
+  </div>
+</div>
+
+<!-- ── Results ── -->
 <div id="results">
+  <div class="results-hdr">
+    <button onclick="restartWizard()">&#8635; Re-identify patterns</button>
+  </div>
+
   <div class="stats-row">
     <div class="stat">
       <div class="stat-val" id="s-grid">-</div>
@@ -163,8 +342,8 @@
       <div class="stat-lbl">Active Cells</div>
     </div>
     <div class="stat">
-      <div class="stat-val" id="s-nums">-</div>
-      <div class="stat-lbl">Patterns Found</div>
+      <div class="stat-val" id="s-codes">-</div>
+      <div class="stat-lbl">Codes Identified</div>
     </div>
   </div>
 
@@ -174,23 +353,23 @@
       <div class="card-body"><img id="orig-img" src="" alt="Uploaded puzzle"></div>
     </div>
     <div class="img-card">
-      <div class="card-hdr">Detected Grid &mdash; numbers are frequency rank (1 = most common)</div>
-      <div class="card-body"><img id="grid-img" src="" alt="Detected grid structure"></div>
+      <div class="card-hdr">Detected Grid &mdash; click any cell to correct its number</div>
+      <div class="card-body"><canvas id="grid-canvas"></canvas></div>
     </div>
   </div>
 
   <div class="freq-card">
-    <div class="card-hdr">Frequency Analysis &mdash; sorted by count &mdash; pattern thumbnail shown for identification</div>
+    <div class="card-hdr" id="freq-card-hdr">Code Number Analysis</div>
     <table class="freq">
       <thead>
         <tr>
-          <th>Rank</th>
-          <th>Pattern</th>
-          <th>Count</th>
+          <th class="sortable" id="th-code" onclick="setSort('code')">Code #<span class="sort-arrow" id="arr-code"></span></th>
+          <th>Pattern(s)</th>
+          <th class="sortable" id="th-freq" onclick="setSort('freq')">Count<span class="sort-arrow" id="arr-freq"></span></th>
           <th>Relative frequency</th>
           <th>% of cells</th>
           <th>Likely letter</th>
-          <th>Your guess</th>
+          <th>Your letter</th>
         </tr>
       </thead>
       <tbody id="freq-body"></tbody>
@@ -199,14 +378,53 @@
 </div>
 
 <script>
-const dropZone = document.getElementById('drop-zone');
+const dropZone  = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const loading   = document.getElementById('loading');
+const wizard    = document.getElementById('wizard');
 const results   = document.getElementById('results');
 const errBox    = document.getElementById('error-box');
 const origImg   = document.getElementById('orig-img');
-const gridImg   = document.getElementById('grid-img');
 const freqBody  = document.getElementById('freq-body');
+const gridCanvas = document.getElementById('grid-canvas');
+
+const FREQ_ORDER = 'ETAOINSHRDLCUMWFGYPBVKJXQZ';
+const CELL_PX    = 44;   // must match backend render_grid cell size
+
+// ── Sort state ────────────────────────────────────────────────────────────────
+let gSortBy  = 'code';
+let gSortDir = 'asc';
+
+function setSort(col) {
+  if (gSortBy === col) { gSortDir = gSortDir === 'asc' ? 'desc' : 'asc'; }
+  else { gSortBy = col; gSortDir = col === 'freq' ? 'desc' : 'asc'; }
+  if (gData) renderResults();
+}
+
+function updateSortHeaders() {
+  ['code', 'freq'].forEach(col => {
+    const th  = document.getElementById('th-' + col);
+    const arr = document.getElementById('arr-' + col);
+    if (gSortBy === col) { th.classList.add('sort-active'); arr.textContent = gSortDir === 'asc' ? ' ▲' : ' ▼'; }
+    else                 { th.classList.remove('sort-active'); arr.textContent = ''; }
+  });
+}
+
+// ── App state ─────────────────────────────────────────────────────────────────
+let gData     = null;
+let gPatterns = [];   // data.frequency (sorted by count desc)
+let gAnswers  = [];   // gAnswers[i] = code number 1-26 or null
+let gCellMap  = {};   // "r,c" -> cluster_id
+let gIdx      = 0;    // wizard position
+
+// popup state
+let gPopupPatternIdx = -1;
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+document.addEventListener('paste', e => {
+  const file = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+  if (file) upload(file.getAsFile());
+});
 
 dropZone.addEventListener('click', () => fileInput.click());
 ['dragover', 'dragenter'].forEach(ev =>
@@ -220,9 +438,7 @@ dropZone.addEventListener('drop', e => {
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith('image/')) upload(f);
 });
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) upload(fileInput.files[0]);
-});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) upload(fileInput.files[0]); });
 
 function upload(file) {
   const reader = new FileReader();
@@ -230,60 +446,335 @@ function upload(file) {
   reader.readAsDataURL(file);
 
   results.style.display = 'none';
+  wizard.style.display  = 'none';
   loading.style.display = 'block';
   errBox.style.display  = 'none';
 
   const fd = new FormData();
   fd.append('image', file);
-
   fetch('/analyze', { method: 'POST', body: fd })
     .then(r => r.json())
-    .then(data => {
-      loading.style.display = 'none';
-      if (data.error) { showError(data.error); return; }
-      render(data);
-    })
-    .catch(e => { loading.style.display = 'none'; showError(e.message); });
+    .then(data => { loading.style.display = 'none'; if (data.error) { showError(data.error); return; } startWizard(data); })
+    .catch(e  => { loading.style.display = 'none'; showError(e.message); });
 }
 
-function showError(msg) {
-  errBox.textContent = '⚠ ' + msg;
-  errBox.style.display = 'block';
-}
+function showError(msg) { errBox.textContent = '⚠ ' + msg; errBox.style.display = 'block'; }
 
-function render(data) {
-  gridImg.src = 'data:image/png;base64,' + data.grid_image;
-  document.getElementById('s-grid').textContent   = data.stats.n_rows + '×' + data.stats.n_cols;
+// ── Wizard ────────────────────────────────────────────────────────────────────
+function startWizard(data) {
+  gData     = data;
+  gPatterns = data.frequency;
+  gIdx      = 0;
+  gAnswers  = new Array(gPatterns.length).fill(null);
+
+  // Pre-build cell lookup map
+  gCellMap = {};
+  (data.cells || []).forEach(cd => { gCellMap[cd.r + ',' + cd.c] = cd.cluster_id; });
+
+  // Stats (shown in results)
+  document.getElementById('s-grid').textContent   = data.stats.n_rows + '\xd7' + data.stats.n_cols;
   document.getElementById('s-active').textContent = data.stats.total_active;
-  document.getElementById('s-nums').textContent   = data.stats.patterns_found;
 
-  const maxCount = data.frequency.length ? data.frequency[0].count : 1;
+  buildWizNumGrid();
+  wizard.style.display = 'block';
+  renderWizStep();
+}
+
+function restartWizard() {
+  if (!gData) return;
+  results.style.display = 'none';
+  closePopup();
+  gIdx     = 0;
+  gAnswers = new Array(gPatterns.length).fill(null);
+  wizard.style.display = 'block';
+  renderWizStep();
+}
+
+function buildWizNumGrid() {
+  const grid = document.getElementById('wiz-num-grid');
+  grid.innerHTML = '';
+  for (let n = 1; n <= 26; n++) {
+    const btn = document.createElement('button');
+    btn.className = 'num-btn'; btn.id = 'wiz-nb-' + n; btn.textContent = n;
+    btn.addEventListener('click', () => wizSelect(n));
+    grid.appendChild(btn);
+  }
+}
+
+function renderWizStep() {
+  const total = gPatterns.length;
+  if (gIdx >= total) { finishWizard(); return; }
+
+  const item = gPatterns[gIdx];
+  const pct  = Math.round((gIdx / total) * 100);
+
+  document.getElementById('wiz-label').textContent    = 'Pattern ' + (gIdx + 1) + ' of ' + total;
+  document.getElementById('wiz-bar-fill').style.width = pct + '%';
+  document.getElementById('wiz-pct-lbl').textContent  = pct + '%';
+  document.getElementById('wiz-thumb').src            = 'data:image/png;base64,' + item.thumbnail;
+  document.getElementById('wiz-count').textContent    = 'Appears ' + item.count + (item.count === 1 ? ' time' : ' times');
+  document.getElementById('wiz-pct-txt').textContent  = item.percentage + '% of active cells';
+  document.getElementById('wiz-back-btn').disabled   = (gIdx === 0);
+
+  const usedNums = new Set(gAnswers.filter((a, i) => a !== null));
+  const cur = gAnswers[gIdx];
+  for (let n = 1; n <= 26; n++) {
+    const btn = document.getElementById('wiz-nb-' + n);
+    btn.className = 'num-btn';
+    if (cur === n)           btn.classList.add('active');
+    else if (usedNums.has(n)) btn.classList.add('assigned');
+  }
+}
+
+function wizSelect(n) { gAnswers[gIdx] = n; gIdx++; renderWizStep(); }
+function wizSkip()    { gAnswers[gIdx] = null; gIdx++; renderWizStep(); }
+function wizBack()    { if (gIdx > 0) { gIdx--; renderWizStep(); } }
+
+function finishWizard() {
+  wizard.style.display  = 'none';
+  results.style.display = 'block';
+  renderResults();
+  drawGrid();
+  buildPopupNumGrid();
+}
+
+// ── Grid canvas ───────────────────────────────────────────────────────────────
+
+// Build cluster_id → code number map from current answers
+function buildAssignMap() {
+  const map = {};
+  gPatterns.forEach((item, i) => {
+    if (gAnswers[i] !== null) map[item.cluster_id] = gAnswers[i];
+  });
+  return map;
+}
+
+function drawGrid(highlightClusterId) {
+  const n_rows  = gData.stats.n_rows;
+  const n_cols  = gData.stats.n_cols;
+  const b       = 1;
+  const w       = n_cols * CELL_PX + b;
+  const h       = n_rows * CELL_PX + b;
+  const assignMap = buildAssignMap();
+
+  gridCanvas.width  = w;
+  gridCanvas.height = h;
+  const ctx = gridCanvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, w, h);
+
+  for (let r = 0; r < n_rows; r++) {
+    for (let c = 0; c < n_cols; c++) {
+      const x  = c * CELL_PX + b;
+      const y  = r * CELL_PX + b;
+      const cw = CELL_PX - b;
+      const ch = CELL_PX - b;
+      const clusterId = gCellMap[r + ',' + c];
+
+      if (clusterId !== undefined) {
+        // Light (active) cell
+        const isHighlighted = (highlightClusterId !== undefined && clusterId === highlightClusterId);
+        ctx.fillStyle = isHighlighted ? '#e3f2fd' : 'white';
+        ctx.fillRect(x, y, cw, ch);
+
+        const codeNum = assignMap[clusterId];
+        if (codeNum !== undefined) {
+          ctx.fillStyle = isHighlighted ? '#0d47a1' : '#1a237e';
+          ctx.font = 'bold 13px Arial';
+          ctx.fillText(String(codeNum), x + 3, y + 15);
+        }
+
+        // Highlight border
+        if (isHighlighted) {
+          ctx.strokeStyle = '#2196f3';
+          ctx.lineWidth   = 2;
+          ctx.strokeRect(x + 1, y + 1, cw - 2, ch - 2);
+        }
+      } else {
+        // Dark (blocked) cell
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x, y, cw, ch);
+      }
+    }
+  }
+}
+
+// Canvas click → open correction popup
+gridCanvas.addEventListener('click', e => {
+  if (!gData) return;
+  const rect  = gridCanvas.getBoundingClientRect();
+  const scaleX = gridCanvas.width  / rect.width;
+  const scaleY = gridCanvas.height / rect.height;
+  const px = (e.clientX - rect.left) * scaleX;
+  const py = (e.clientY - rect.top)  * scaleY;
+  const c  = Math.floor(px / CELL_PX);
+  const r  = Math.floor(py / CELL_PX);
+
+  const clusterId = gCellMap[r + ',' + c];
+  if (clusterId === undefined) return; // clicked a dark cell
+
+  const patternIdx = gPatterns.findIndex(p => p.cluster_id === clusterId);
+  if (patternIdx === -1) return;
+
+  openPopup(e.clientX, e.clientY, patternIdx, clusterId);
+});
+
+// ── Correction popup ──────────────────────────────────────────────────────────
+function buildPopupNumGrid() {
+  const grid = document.getElementById('popup-num-grid');
+  grid.innerHTML = '';
+  for (let n = 1; n <= 26; n++) {
+    const btn = document.createElement('button');
+    btn.className = 'num-btn'; btn.id = 'pop-nb-' + n; btn.textContent = n;
+    btn.addEventListener('click', () => popupSelect(n));
+    grid.appendChild(btn);
+  }
+}
+
+function openPopup(clientX, clientY, patternIdx, clusterId) {
+  gPopupPatternIdx = patternIdx;
+  const item = gPatterns[patternIdx];
+  const currentCode = gAnswers[patternIdx];
+
+  document.getElementById('popup-thumb').src    = 'data:image/png;base64,' + item.thumbnail;
+  document.getElementById('popup-title').textContent = 'Pattern ' + (patternIdx + 1) + ' of ' + gPatterns.length;
+  document.getElementById('popup-sub').textContent   =
+    'Appears ' + item.count + (item.count === 1 ? ' time' : ' times') +
+    (currentCode ? ' — currently assigned to ' + currentCode : ' — unassigned');
+
+  // Style number buttons
+  const usedNums = new Set(gAnswers.filter((a, i) => a !== null && i !== patternIdx));
+  for (let n = 1; n <= 26; n++) {
+    const btn = document.getElementById('pop-nb-' + n);
+    btn.className = 'num-btn';
+    if (currentCode === n)    btn.classList.add('active');
+    else if (usedNums.has(n)) btn.classList.add('assigned');
+  }
+
+  // Position popup: prefer right of click, flip left if near edge
+  const popup = document.getElementById('cell-popup');
+  popup.style.display = 'block';
+  const pw = popup.offsetWidth  || 330;
+  const ph = popup.offsetHeight || 260;
+  let left = clientX + 12;
+  let top  = clientY - 20;
+  if (left + pw > window.innerWidth  - 10) left = clientX - pw - 12;
+  if (top  + ph > window.innerHeight - 10) top  = window.innerHeight - ph - 10;
+  popup.style.left = Math.max(4, left) + 'px';
+  popup.style.top  = Math.max(4, top)  + 'px';
+
+  // Highlight matching cells on the grid
+  drawGrid(clusterId);
+}
+
+function closePopup() {
+  document.getElementById('cell-popup').style.display = 'none';
+  gPopupPatternIdx = -1;
+  if (gData) drawGrid(); // remove highlight
+}
+
+function popupSelect(n) {
+  if (gPopupPatternIdx === -1) return;
+  gAnswers[gPopupPatternIdx] = n;
+  closePopup();
+  renderResults();
+  drawGrid();
+}
+
+function popupClear() {
+  if (gPopupPatternIdx === -1) return;
+  gAnswers[gPopupPatternIdx] = null;
+  closePopup();
+  renderResults();
+  drawGrid();
+}
+
+// Close popup when clicking outside
+document.addEventListener('click', e => {
+  const popup = document.getElementById('cell-popup');
+  if (popup.style.display === 'block' && !popup.contains(e.target) && e.target !== gridCanvas) {
+    closePopup();
+  }
+});
+
+// ── Results table ─────────────────────────────────────────────────────────────
+function renderResults() {
   freqBody.innerHTML = '';
 
-  data.frequency.forEach(item => {
-    const barPct = Math.round((item.count / maxCount) * 100);
+  const groups     = {};
+  const unassigned = [];
+  gPatterns.forEach((item, i) => {
+    const n = gAnswers[i];
+    if (n !== null) { if (!groups[n]) groups[n] = []; groups[n].push(item); }
+    else unassigned.push(item);
+  });
+
+  const codeNums   = Object.keys(groups).map(Number);
+  const identified = codeNums.length;
+
+  document.getElementById('s-codes').textContent = identified + ' / 26';
+  document.getElementById('freq-card-hdr').textContent =
+    identified + ' of 26 code numbers identified' +
+    (unassigned.length ? ' — ' + unassigned.length + ' pattern' + (unassigned.length > 1 ? 's' : '') + ' unidentified' : '');
+
+  const codeCounts = {};
+  codeNums.forEach(n => { codeCounts[n] = groups[n].reduce((s, item) => s + item.count, 0); });
+  const maxCount    = codeNums.length ? Math.max(...codeNums.map(n => codeCounts[n])) : 1;
+  const totalActive = gData.stats.total_active || 1;
+
+  // Letter hints always by frequency, independent of display sort
+  const byFreqDesc = [...codeNums].sort((a, b) => codeCounts[b] - codeCounts[a]);
+  const letterHint = {};
+  byFreqDesc.forEach((n, rank) => { letterHint[n] = rank < 26 ? FREQ_ORDER[rank] : '?'; });
+
+  // Apply display sort
+  if (gSortBy === 'freq') {
+    codeNums.sort((a, b) => gSortDir === 'asc' ? codeCounts[a] - codeCounts[b] : codeCounts[b] - codeCounts[a]);
+  } else {
+    codeNums.sort((a, b) => gSortDir === 'asc' ? a - b : b - a);
+  }
+  updateSortHeaders();
+
+  codeNums.forEach(n => {
+    const items      = groups[n];
+    const totalCount = codeCounts[n];
+    const barPct     = Math.round((totalCount / maxCount) * 100);
+    const pct        = (100 * totalCount / totalActive).toFixed(1);
+    const thumbsHtml = items.map(item =>
+      '<img class="thumb" src="data:image/png;base64,' + item.thumbnail + '" alt="pattern ' + n + '">'
+    ).join('');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="rank-badge">${item.rank}</span></td>
-      <td><img class="thumb" src="data:image/png;base64,${item.thumbnail}" alt="pattern ${item.rank}"></td>
-      <td>${item.count}</td>
-      <td>
-        <div class="bar-wrap">
-          <div class="bar-bg"><div class="bar-fill" style="width:${barPct}%"></div></div>
-        </div>
-      </td>
-      <td style="color:#888;font-size:12px">${item.percentage}%</td>
-      <td><span class="hint-letter">${item.letter_hint}</span></td>
-      <td>
-        <input class="guess-input" type="text" maxlength="2" placeholder="?"
-          data-rank="${item.rank}"
-          oninput="this.value=this.value.toUpperCase().replace(/[^0-9A-Z]/g,'');
-                   this.classList.toggle('set',this.value.length>0)">
-      </td>`;
+    tr.innerHTML =
+      '<td><span class="code-badge">' + n + '</span></td>' +
+      '<td><div class="thumb-row">' + thumbsHtml + '</div></td>' +
+      '<td>' + totalCount + '</td>' +
+      '<td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:' + barPct + '%"></div></div></div></td>' +
+      '<td style="color:#888;font-size:12px">' + pct + '%</td>' +
+      '<td><span class="hint-letter">' + letterHint[n] + '</span></td>' +
+      '<td><input class="letter-input" type="text" maxlength="1" placeholder="?"' +
+      ' oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\');this.classList.toggle(\'set\',this.value.length>0)"></td>';
     freqBody.appendChild(tr);
   });
 
-  results.style.display = 'block';
+  if (unassigned.length) {
+    unassigned.forEach((item, i) => {
+      const barPct = Math.round((item.count / maxCount) * 100);
+      const pct    = (100 * item.count / totalActive).toFixed(1);
+      const tr = document.createElement('tr');
+      if (i === 0) tr.className = 'unid-first';
+      tr.innerHTML =
+        '<td><span class="code-badge unset">?</span></td>' +
+        '<td><div class="thumb-row"><img class="thumb" src="data:image/png;base64,' + item.thumbnail + '" alt="unidentified"></div></td>' +
+        '<td>' + item.count + '</td>' +
+        '<td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:' + barPct + '%"></div></div></div></td>' +
+        '<td style="color:#888;font-size:12px">' + pct + '%</td>' +
+        '<td><span class="hint-letter" style="opacity:0.4">?</span></td>' +
+        '<td></td>';
+      freqBody.appendChild(tr);
+    });
+  }
 }
 </script>
 </body>
