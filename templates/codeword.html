@@ -540,6 +540,10 @@ function finishWizard() {
 
 // ── Grid canvas ───────────────────────────────────────────────────────────────
 
+// Subtle pastel backgrounds for the top-5 most-frequent code numbers
+const RANK_COLORS = ['#fff9c4', '#fce4ec', '#e8f5e9', '#e3f2fd', '#ede7f6'];
+//                    amber      rose       green      blue       lavender
+
 // Build cluster_id → code number map from current answers
 function buildAssignMap() {
   const map = {};
@@ -549,13 +553,29 @@ function buildAssignMap() {
   return map;
 }
 
+// Rank code numbers by combined count desc; ties broken by code number asc.
+// Returns a map: code number → 1-based rank (only rank 1-5 get a colour).
+function buildRankMap() {
+  const codeCounts = {};
+  gPatterns.forEach((item, i) => {
+    const n = gAnswers[i];
+    if (n !== null) codeCounts[n] = (codeCounts[n] || 0) + item.count;
+  });
+  const sorted = Object.keys(codeCounts).map(Number)
+    .sort((a, b) => codeCounts[b] - codeCounts[a] || a - b);
+  const rankMap = {};
+  sorted.forEach((n, i) => { rankMap[n] = i + 1; });
+  return rankMap;
+}
+
 function drawGrid(highlightClusterId) {
-  const n_rows  = gData.stats.n_rows;
-  const n_cols  = gData.stats.n_cols;
-  const b       = 1;
-  const w       = n_cols * CELL_PX + b;
-  const h       = n_rows * CELL_PX + b;
+  const n_rows    = gData.stats.n_rows;
+  const n_cols    = gData.stats.n_cols;
+  const b         = 1;
+  const w         = n_cols * CELL_PX + b;
+  const h         = n_rows * CELL_PX + b;
   const assignMap = buildAssignMap();
+  const rankMap   = buildRankMap();
 
   gridCanvas.width  = w;
   gridCanvas.height = h;
@@ -576,10 +596,19 @@ function drawGrid(highlightClusterId) {
       if (clusterId !== undefined) {
         // Light (active) cell
         const isHighlighted = (highlightClusterId !== undefined && clusterId === highlightClusterId);
-        ctx.fillStyle = isHighlighted ? '#e3f2fd' : 'white';
+        const codeNum = assignMap[clusterId];
+
+        // Background: highlight overrides rank colour
+        let bg = 'white';
+        if (isHighlighted) {
+          bg = '#bbdefb';
+        } else if (codeNum !== undefined) {
+          const rank = rankMap[codeNum];
+          if (rank && rank <= 5) bg = RANK_COLORS[rank - 1];
+        }
+        ctx.fillStyle = bg;
         ctx.fillRect(x, y, cw, ch);
 
-        const codeNum = assignMap[clusterId];
         if (codeNum !== undefined) {
           ctx.fillStyle = isHighlighted ? '#0d47a1' : '#1a237e';
           ctx.font = 'bold 13px Arial';
