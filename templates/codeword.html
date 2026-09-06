@@ -427,17 +427,24 @@ document.addEventListener('paste', e => {
 });
 
 dropZone.addEventListener('click', () => fileInput.click());
+
+// Visual feedback on the drop zone only
 ['dragover', 'dragenter'].forEach(ev =>
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); })
 );
-['dragleave', 'dragend'].forEach(ev =>
+['dragleave', 'dragend', 'drop'].forEach(ev =>
   dropZone.addEventListener(ev, () => dropZone.classList.remove('over'))
 );
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('over');
+
+// Catch drops ANYWHERE on the page so the browser never navigates away
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith('image/')) upload(f);
 });
+
 fileInput.addEventListener('change', () => { if (fileInput.files[0]) upload(fileInput.files[0]); });
 
 function upload(file) {
@@ -453,7 +460,10 @@ function upload(file) {
   const fd = new FormData();
   fd.append('image', file);
   fetch('/analyze', { method: 'POST', body: fd })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error('Upload failed (HTTP ' + r.status + ') — check server logs');
+      return r.json();
+    })
     .then(data => { loading.style.display = 'none'; if (data.error) { showError(data.error); return; } startWizard(data); })
     .catch(e  => { loading.style.display = 'none'; showError(e.message); });
 }
