@@ -427,6 +427,17 @@ h1 {
 
 #clear-groups-btn:hover { background: #3a1a1a; border-color: #f44336; color: #f44336; }
 
+#ignore-groups-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #aac;
+  cursor: pointer;
+  user-select: none;
+}
+
 /* ── Results ────────────────────────────────────────────── */
 
 #results-count {
@@ -588,6 +599,10 @@ h1 {
     <div class="groups-hint">Click a colour to activate it, then click position tiles to link them. Linked positions must share the same letter.</div>
     <div id="group-btns"></div>
     <button id="clear-groups-btn">Clear All Groups</button>
+    <label id="ignore-groups-label" title="When checked, words with unspecified repeated letters are included">
+      <input type="checkbox" id="ignore-groups-cb" onchange="onIgnoreGroupsChange()">
+      Ignore groups
+    </label>
   </div>
 
 </div>
@@ -946,6 +961,17 @@ document.getElementById('clear-groups-btn').addEventListener('click', () => {
   search();
 });
 
+function onIgnoreGroupsChange() {
+  if (document.getElementById('ignore-groups-cb').checked) {
+    mem().groups = {};
+    selGroup = null;
+    buildMemoryButtons();
+    buildGroupButtons();
+    refreshTiles();
+  }
+  search();
+}
+
 // ── Letter mode buttons (Assign / Block Position) ─────────
 
 function buildLetterModeButtons() {
@@ -1077,6 +1103,7 @@ async function doSearch() {
       posUncommon,
       posExclude: mem().posExclude,
       groups,
+      ignoreGroups: document.getElementById('ignore-groups-cb').checked,
     }),
   });
   const data = await resp.json();

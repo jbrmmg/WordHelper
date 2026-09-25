@@ -28,6 +28,7 @@ def search():
     pos_uncommon  = [int(p) for p in data.get('posUncommon', [])]
     pos_exclude   = data.get('posExclude', {})    # {"1": ["E", "A"]}
     groups        = data.get('groups', [])        # [[0, 3], [1, 4], ...]
+    ignore_groups = data.get('ignoreGroups', False)
 
     con = sqlite3.connect(DB_PATH)
     rows = con.execute(
@@ -55,21 +56,23 @@ def search():
             continue
 
         # A letter placed at specific positions may not appear anywhere else
-        pattern_allowed = {}
-        for pos_str, letter in pattern.items():
-            ltr = letter.lower()
-            if ltr not in pattern_allowed:
-                pattern_allowed[ltr] = set()
-            pattern_allowed[ltr].add(int(pos_str))
-        for ltr, allowed in pattern_allowed.items():
-            for i, c in enumerate(w):
-                if c == ltr and i not in allowed:
-                    ok = False
+        # (skipped when ignoring groups, since the letter may repeat at unlisted positions)
+        if not ignore_groups:
+            pattern_allowed = {}
+            for pos_str, letter in pattern.items():
+                ltr = letter.lower()
+                if ltr not in pattern_allowed:
+                    pattern_allowed[ltr] = set()
+                pattern_allowed[ltr].add(int(pos_str))
+            for ltr, allowed in pattern_allowed.items():
+                for i, c in enumerate(w):
+                    if c == ltr and i not in allowed:
+                        ok = False
+                        break
+                if not ok:
                     break
             if not ok:
-                break
-        if not ok:
-            continue
+                continue
 
         for pos_str, letters in pos_exclude.items():
             if w[int(pos_str)] in [l.lower() for l in letters]:
@@ -112,19 +115,21 @@ def search():
             if len(letters_in_group) > 1:
                 ok = False
                 break
-            group_letter = next(iter(letters_in_group))
-            if any(c == group_letter for i, c in enumerate(w) if i not in group_set):
-                ok = False
-                break
+            if not ignore_groups:
+                group_letter = next(iter(letters_in_group))
+                if any(c == group_letter for i, c in enumerate(w) if i not in group_set):
+                    ok = False
+                    break
         if not ok:
             continue
 
-        all_grouped = set()
-        for group in groups:
-            all_grouped.update(group)
-        unknown = [w[i] for i in range(len(w)) if i not in all_grouped and str(i) not in pattern]
-        if len(unknown) != len(set(unknown)):
-            continue
+        if not ignore_groups:
+            all_grouped = set()
+            for group in groups:
+                all_grouped.update(group)
+            unknown = [w[i] for i in range(len(w)) if i not in all_grouped and str(i) not in pattern]
+            if len(unknown) != len(set(unknown)):
+                continue
 
         results.append(w.upper())
 
