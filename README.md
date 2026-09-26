@@ -45,6 +45,16 @@ Both apps draw from a shared SQLite database at `/var/lib/wordhelper/words.db`, 
 
 Words are filtered at runtime to `length`, `is_proper=0`, `has_special=0`, `is_ascii=1`.
 
+### Adding words
+
+To add new words to the database, append them to `words.txt` (one word per line) and re-run the import script:
+
+```bash
+sudo .venv/bin/python import_words.py --source words.txt --source-tag wordlist --lowercase
+```
+
+Duplicates are silently skipped, so re-running against an existing database is safe.
+
 See `WORD_DB.md` for full schema documentation and the `import_words.py` script for rebuilding or extending the database.
 
 ---
