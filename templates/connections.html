@@ -218,17 +218,8 @@ h1 {
 
 .card-btn:hover { opacity: 0.85; }
 
-.note-btn { font-size: 15px; }
-.note-btn.active   { opacity: 0.85; }
-.note-btn.has-note { opacity: 0.7; color: #a0d4f5; }
-
 .clear-btn { font-size: 12px; opacity: 0.45; padding: 1px 4px; }
 .clear-btn.hidden { display: none; }
-
-.word-card.yellow .note-btn.has-note,
-.word-card.green  .note-btn.has-note,
-.word-card.blue   .note-btn.has-note,
-.word-card.purple .note-btn.has-note { color: #444; }
 
 .word-card.yellow .card-btn,
 .word-card.green  .card-btn,
@@ -265,26 +256,6 @@ h1 {
 .colour-dot.blue         { background: #b0c4ef; }
 .colour-dot.purple       { background: #ba81c5; }
 
-.card-note-area { display: none; margin-top: 8px; }
-.word-card.note-open .card-note-area { display: block; }
-
-.card-note {
-  width: 100%;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(0, 0, 0, 0.22);
-  border-radius: 6px;
-  color: inherit;
-  font-size: 12px;
-  resize: vertical;
-  min-height: 64px;
-  font-family: Arial, sans-serif;
-  line-height: 1.4;
-}
-
-.card-note::placeholder { opacity: 0.45; }
-.card-note:focus { outline: none; }
-
 .board-actions {
   display: flex;
   justify-content: center;
@@ -293,6 +264,37 @@ h1 {
   max-width: 860px;
   margin: 0 auto;
 }
+
+.board-notes-area {
+  max-width: 860px;
+  margin: 14px auto 0;
+}
+
+.board-notes-label {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6a8aaa;
+  margin-bottom: 6px;
+}
+
+.board-notes-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: #1e1e3a;
+  border: 1px solid #3a3a6a;
+  border-radius: 8px;
+  color: #eee;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.board-notes-textarea::placeholder { color: #445; }
+.board-notes-textarea:focus { outline: none; border-color: #6a8aaa; }
 
 /* ── Shake ───────────────────────────────────────────────── */
 
@@ -363,50 +365,6 @@ h1 {
   letter-spacing: 1px;
 }
 
-.solved-notes-btn {
-  background: rgba(0, 0, 0, 0.14);
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: bold;
-  color: #1a1a1a;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-.solved-notes-btn:hover { background: rgba(0, 0, 0, 0.22); }
-
-.solved-notes-area {
-  display: none;
-  margin-top: 10px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.solved-row.notes-open .solved-notes-area { display: block; }
-
-.solved-note-entry {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.solved-note-entry:last-child { margin-bottom: 0; }
-
-.solved-note-word {
-  font-weight: bold;
-  flex-shrink: 0;
-  min-width: 90px;
-}
-
-.solved-note-text       { opacity: 0.85; }
-.solved-note-text.empty { opacity: 0.38; font-style: italic; }
-
 .solved-actions {
   display: flex;
   justify-content: center;
@@ -461,6 +419,10 @@ h1 {
     <button class="btn btn-secondary" id="edit-words-btn">&#x270F; Edit Words</button>
     <button class="btn btn-danger" id="reset-btn">&#x26A0; Reset</button>
   </div>
+  <div class="board-notes-area">
+    <div class="board-notes-label">Notes</div>
+    <textarea id="board-notes" class="board-notes-textarea" placeholder="Research notes…"></textarea>
+  </div>
 </div>
 
 <!-- ── Phase 3: Solved ─────────────────────────────────── -->
@@ -482,15 +444,12 @@ const STATE_KEY   = 'connections_state';
 let state = defaultState();
 let prevState = null; // saved before entering edit-words mode
 
-// Open-note tracking survives re-renders within a session
-const openNotes = new Set();
-
 function defaultState() {
   return {
     words:         [],
     originalOrder: [],
     assignments:   {},
-    notes:         {},
+    boardNote:     '',
     titles:        { yellow: '', green: '', blue: '', purple: '' },
   };
 }
@@ -507,7 +466,7 @@ function loadState() {
       words:         s.words,
       originalOrder: s.originalOrder || s.words,
       assignments:   s.assignments || {},
-      notes:         s.notes       || {},
+      boardNote:     s.boardNote    || '',
       titles:        s.titles      || { yellow: '', green: '', blue: '', purple: '' },
     };
     return true;
@@ -523,7 +482,6 @@ function saveState() {
 function clearState() {
   localStorage.removeItem(STATE_KEY);
   state = defaultState();
-  openNotes.clear();
 }
 
 // ── Phase management ──────────────────────────────────────
@@ -608,27 +566,24 @@ document.getElementById('start-btn').addEventListener('click', () => {
   }
 
   if (prevState) {
-    // Editing: preserve assignments/notes/titles for unchanged words
+    // Editing: preserve assignments/boardNote/titles for unchanged words
     const newAssignments = {};
-    const newNotes = {};
     words.forEach(w => {
       if (prevState.assignments[w]) newAssignments[w] = prevState.assignments[w];
-      if (prevState.notes[w])       newNotes[w]       = prevState.notes[w];
     });
     state.words         = words;
     state.originalOrder = [...words];
     state.assignments   = newAssignments;
-    state.notes         = newNotes;
+    state.boardNote     = prevState.boardNote || '';
     state.titles        = prevState.titles;
     prevState = null;
   } else {
     state.words         = words;
     state.originalOrder = [...words];
     state.assignments   = {};
-    state.notes         = {};
+    state.boardNote     = '';
     state.titles        = { yellow: '', green: '', blue: '', purple: '' };
   }
-  openNotes.clear();
   saveState();
   renderBoard();
   showPhase('board');
@@ -641,6 +596,9 @@ let dragWord = null;
 function renderBoard() {
   renderGroupBar();
   renderWordGrid();
+  const notesEl = document.getElementById('board-notes');
+  notesEl.value = state.boardNote || '';
+  notesEl.oninput = () => { state.boardNote = notesEl.value; saveState(); };
 }
 
 function renderGroupBar() {
@@ -674,13 +632,11 @@ function renderWordGrid() {
 }
 
 function createCard(word) {
-  const group    = state.assignments[word] || null;
-  const noteText = state.notes[word] || '';
-  const noteOpen = openNotes.has(word);
+  const group = state.assignments[word] || null;
 
   const card = document.createElement('div');
   card.id        = `card-${word}`;
-  card.className = `word-card${group ? ' ' + group : ''}${noteOpen ? ' note-open' : ''}`;
+  card.className = `word-card${group ? ' ' + group : ''}`;
   card.draggable = true;
 
   const main = document.createElement('div');
@@ -690,14 +646,7 @@ function createCard(word) {
   label.className   = 'card-label';
   label.textContent = word;
 
-  const noteBtn = document.createElement('button');
-  noteBtn.className   = `card-btn note-btn${noteText ? ' has-note' : ''}${noteOpen ? ' active' : ''}`;
-  noteBtn.textContent = '✎';
-  noteBtn.title       = 'Toggle notes';
-  noteBtn.setAttribute('draggable', 'false');
-
   main.appendChild(label);
-  main.appendChild(noteBtn);
 
   // Colour selector row
   const coloursRow = document.createElement('div');
@@ -735,39 +684,8 @@ function createCard(word) {
   });
   coloursRow.appendChild(clearBtn);
 
-  const noteArea = document.createElement('div');
-  noteArea.className = 'card-note-area';
-
-  const textarea = document.createElement('textarea');
-  textarea.className   = 'card-note';
-  textarea.placeholder = 'Research notes…';
-  textarea.value       = noteText;
-  textarea.setAttribute('draggable', 'false');
-
-  noteArea.appendChild(textarea);
   card.appendChild(coloursRow);
   card.appendChild(main);
-  card.appendChild(noteArea);
-
-  // Note toggle
-  noteBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    const isOpen = card.classList.toggle('note-open');
-    noteBtn.classList.toggle('active', isOpen);
-    if (isOpen) { openNotes.add(word); textarea.focus(); }
-    else        { openNotes.delete(word); }
-  });
-
-  // Prevent textarea events bubbling to card
-  textarea.addEventListener('click',     e => e.stopPropagation());
-  textarea.addEventListener('mousedown', e => e.stopPropagation());
-  textarea.addEventListener('dragstart', e => e.stopPropagation());
-
-  textarea.addEventListener('input', () => {
-    state.notes[word] = textarea.value;
-    noteBtn.classList.toggle('has-note', !!textarea.value.trim());
-    saveState();
-  });
 
   // Drag source
   card.addEventListener('dragstart', e => {
@@ -863,40 +781,10 @@ function renderSolved() {
       chipsWrap.appendChild(chip);
     }
 
-    const notesBtn = document.createElement('button');
-    notesBtn.className   = 'solved-notes-btn';
-    notesBtn.textContent = 'Notes ▾';
-    notesBtn.addEventListener('click', () => {
-      const open = row.classList.toggle('notes-open');
-      notesBtn.textContent = open ? 'Notes ▴' : 'Notes ▾';
-    });
-
     top.appendChild(titleInput);
     top.appendChild(chipsWrap);
-    top.appendChild(notesBtn);
-
-    const notesArea = document.createElement('div');
-    notesArea.className = 'solved-notes-area';
-    for (const w of groupWords) {
-      const entry = document.createElement('div');
-      entry.className = 'solved-note-entry';
-
-      const wLabel = document.createElement('span');
-      wLabel.className   = 'solved-note-word';
-      wLabel.textContent = w + ':';
-
-      const note = (state.notes[w] || '').trim();
-      const noteSpan = document.createElement('span');
-      noteSpan.className   = `solved-note-text${note ? '' : ' empty'}`;
-      noteSpan.textContent = note || '(no notes)';
-
-      entry.appendChild(wLabel);
-      entry.appendChild(noteSpan);
-      notesArea.appendChild(entry);
-    }
 
     row.appendChild(top);
-    row.appendChild(notesArea);
     container.appendChild(row);
   }
 }
@@ -977,7 +865,7 @@ document.getElementById('edit-words-btn-solved').addEventListener('click', editW
 // ── Reset ─────────────────────────────────────────────────
 
 function confirmReset() {
-  if (!confirm('Reset the puzzle? All assignments, notes and titles will be cleared.')) return;
+  if (!confirm('Reset the puzzle? All assignments, notes, and titles will be cleared.')) return;
   prevState = null;
   clearState();
   buildEntryGrid();
