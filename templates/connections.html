@@ -296,6 +296,17 @@ h1 {
 .board-notes-textarea::placeholder { color: #445; }
 .board-notes-textarea:focus { outline: none; border-color: #6a8aaa; }
 
+/* ── Solved banner (inline, replaces group-bar badges) ───── */
+
+.solved-banner {
+  font-size: 26px;
+  font-weight: bold;
+  color: #a0d4f5;
+  letter-spacing: 2px;
+  padding: 6px 30px;
+  text-align: center;
+}
+
 /* ── Shake ───────────────────────────────────────────────── */
 
 @keyframes shake {
@@ -604,6 +615,13 @@ function renderBoard() {
 function renderGroupBar() {
   const bar = document.getElementById('group-bar');
   bar.innerHTML = '';
+  if (allAssigned()) {
+    const banner = document.createElement('div');
+    banner.className   = 'solved-banner';
+    banner.textContent = 'Solved!';
+    bar.appendChild(banner);
+    return;
+  }
   for (const group of GROUPS) {
     const count = countGroup(group);
     const badge = document.createElement('div');
@@ -733,7 +751,6 @@ function assignGroup(word, group) {
   state.assignments[word] = group;
   saveState();
   renderBoard();
-  if (allAssigned()) { renderSolved(); showPhase('solved'); }
 }
 
 function shakeEl(id) {
@@ -878,13 +895,8 @@ function confirmReset() {
 buildEntryGrid();
 
 if (loadState() && state.words.length === 16) {
-  if (allAssigned()) {
-    renderSolved();
-    showPhase('solved');
-  } else {
-    renderBoard();
-    showPhase('board');
-  }
+  renderBoard();
+  showPhase('board');
 }
 </script>
 </body>
