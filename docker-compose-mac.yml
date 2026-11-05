@@ -1,0 +1,28 @@
+services:
+  wordhelper:
+    image: nexus.jbrmmg.me.uk:8084/wordhelper:latest
+    platform: linux/amd64
+    container_name: wordhelper
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.wordhelper:/var/lib/wordhelper
+
+  wordclue:
+    image: nexus.jbrmmg.me.uk:8084/wordclue:latest
+    platform: linux/amd64
+    container_name: wordclue
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ${HOME}/.wordhelper:/var/lib/wordhelper
+
+  connections:
+    image: nexus.jbrmmg.me.uk:8084/connections:latest
+    platform: linux/amd64
+    container_name: connections
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
